@@ -1,0 +1,97 @@
+<?php
+
+namespace App\Http\Controllers;
+use App\Models\beneficiariesCategories;   
+use Illuminate\Validation\Rule; 
+
+
+use Illuminate\Http\Request;
+
+class beneficiariesCategoriesController extends Controller
+{
+
+
+    // قائمة الفئات
+    public function index()
+    {
+        // بصفحات بسيطة؛ عدّل الرقم حسب حاجتك
+        $items = beneficiariesCategories::orderByDesc('id')->paginate(15);
+        return view('beneficiariescategory.index', compact('items'));
+    }
+
+    // شاشة الإضافة
+    public function create()
+    {
+        return view('beneficiariescategory.create');
+    }
+
+    // حفظ سجل جديد
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'name'   => ['required','string','max:255'],
+            'code'   => ['required','string','regex:/^\d{1,5}$/', 'max:5',
+                         'unique:beneficiaries_categories,code'],
+            'status' => ['required', Rule::in([0,1])],
+        ], [
+            'code.regex' => 'الكود يجب أن يكون أرقامًا فقط حتى 5 خانات.',
+        ]);
+
+        beneficiariesCategories::create($data);
+
+        return redirect()
+            ->route('beneficiariescategory.index')
+            ->with('success', 'تم إضافة الفئة بنجاح.');
+    }
+
+    // عرض سجل واحد (اختياري)
+    public function show($id)
+    {
+        $item = beneficiariesCategories::findOrFail($id);
+        return view('beneficiariescategory.show', compact('item'));
+    }
+
+    // شاشة التعديل
+    public function edit($id)
+    {
+        $item = beneficiariesCategories::findOrFail($id);
+        return view('beneficiariescategory.edit', compact('item'));
+    }
+
+    // تحديث السجل
+    public function update(Request $request, $id)
+    {
+        $item = beneficiariesCategories::findOrFail($id);
+
+        $data = $request->validate([
+            'name'   => ['required','string','max:255'],
+            'code'   => [
+                'required','string','regex:/^\d{1,5}$/','max:5',
+                Rule::unique('beneficiaries_categories','code')->ignore($item->id),
+            ],
+            'status' => ['required', Rule::in([0,1])],
+        ], [
+            'code.regex' => 'الكود يجب أن يكون أرقامًا فقط حتى 5 خانات.',
+        ]);
+
+        $item->update($data);
+
+        return redirect()
+            ->route('beneficiariescategory.index')
+            ->with('success', 'تم تحديث الفئة بنجاح.');
+    }
+
+    // حذف السجل
+    public function destroy($id)
+    {
+        $item = beneficiariesCategories::findOrFail($id);
+        $item->delete();
+
+        return redirect()
+            ->route('beneficiariescategory.index')
+            ->with('success', 'تم حذف الفئة بنجاح.');
+    }
+}
+
+
+

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 50 50" role="img" aria-label="Loading">
+  <title>Loading…</title>
+  <circle cx="25" cy="25" r="20" fill="none" stroke="#F59E0B" stroke-width="5" stroke-linecap="round" stroke-dasharray="60 125">
+    <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"></animateTransform>
+  </circle>
+</svg>
