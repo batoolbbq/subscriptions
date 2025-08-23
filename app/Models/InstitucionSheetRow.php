@@ -7,16 +7,21 @@ use Illuminate\Database\Eloquent\Model;
 
 class InstitucionSheetRow extends Model
 {
-    use HasFactory;
-
-    protected $table = 'institucion_sheet_rows';
-
     protected $fillable = [
         'institucion_id',
         'name',
+        'father_name',
+        'last_name',
         'national_id',
         'family_registry_no',
+        'insured_no',
+        'pension_no',
         'account_no',
+        'total_pension',
+    ];
+
+    protected $casts = [
+        'total_pension' => 'decimal:2',
     ];
 
     public function institucion()
@@ -24,3 +29,4 @@ class InstitucionSheetRow extends Model
         return $this->belongsTo(Institucion::class);
     }
 }
+

@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\InstitucionSheetImport;
 use Normalizer;   // <<< أضف هذا السطر
 
-use App\Imports\InstitucionSheetImport;
 
 class InstitucionController extends Controller
 {
@@ -78,103 +78,93 @@ class InstitucionController extends Controller
             'showAgentSelect','preselectedAgentId'
         ));
     }
-    public function store(Request $request)
-    {
-        $user = auth()->user();
 
-        // نفرض قيمة insurance_agent_id حسب الدور قبل الفالديشن
-        $forcedAgentId = null;
+public function store(Request $request)
+{
+    $user = auth()->user();
 
-        if ($user->hasRole('insurance-manager')) {
-            // ثابتة حسب طلبك
-            $forcedAgentId = 94;
-        } elseif ($user->hasRole('Wakeel')) {
-            // أول وكيل مرتبط بالمستخدم (علاقة many-to-many)
-            $forcedAgentId = $user->insuranceAgents()->pluck('insurance_agents.id')->first();
+    // نفرض قيمة insurance_agent_id حسب الدور قبل الفالديشن
+    $forcedAgentId = null;
 
-            if (!$forcedAgentId) {
-                return back()
-                    ->withErrors(['insurance_agent_id' => 'لا يوجد وكيل تأميني مرتبط بحسابك.'])
-                    ->withInput();
-            }
+    if ($user->hasRole('insurance-manager')) {
+        $forcedAgentId = 94; // حسب طلبك
+    } elseif ($user->hasRole('Wakeel')) {
+        $forcedAgentId = $user->insuranceAgents()->pluck('insurance_agents.id')->first();
+        if (!$forcedAgentId) {
+            return back()->withErrors(['insurance_agent_id' => 'لا يوجد وكيل تأميني مرتبط بحسابك.'])->withInput();
         }
-        // Admin: ما نفرضش قيمة — ياخذها من الفورم
-
-        if (!is_null($forcedAgentId)) {
-            // ندمج القيمة المفروضة في الطلب حتى تدخل في الفالديشن والإنشاء
-            $request->merge(['insurance_agent_id' => $forcedAgentId]);
-        }
-
-        // قاعدة الفالديشن لحقل الوكيل:
-        // للأدمن: مطلوب (لتفادي أخطاء NOT NULL)
-        // لغيره: موجودة تلقائيًا من الدمج فوق وتحتاج بس exists
-        $agentRule = $user->hasRole('admin')
-            ? 'required|exists:insurance_agents,id'
-            : 'exists:insurance_agents,id';
-
-        $validated = $request->validate([
-            'name'               => ['required', 'string', 'max:255'],
-            'commercial_number'  => ['nullable', 'string', 'max:255', 'unique:institucions,commercial_number'],
-            'work_categories_id' => ['required', 'exists:work_categories,id'],
-            // ✅ تصحيح اسم الجدول: كان subscriptions_id يتحقق على subscription33 بالغلط
-             'subscriptions_id'   => ['required', 'exists:subscription33,id'],
-            'insurance_agent_id' =>$agentRule,
-            'status'             => ['nullable', 'in:0,1'],
-
-            'license_number'     => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
-            'commercial_record'  => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
-        ], [
-            'insurance_agent_id.required' => 'يجب اختيار وكيل تأميني.',
-        ]);
-
-        $data = $validated;
-
-      
-        if (auth()->user()->hasRole('Wakeel')) {
-            $data['status'] = 0;
-        } else {
-            $data['status'] = array_key_exists('status', $data)
-                ? (int) (bool) $data['status']   // يحوّل "on"/"1" لرقم 1، و"0"/null لرقم 0
-                : 1;
-        }
-
-        // التأكد من وجود مجلد التخزين
-        $uploadPath = public_path('institucions_files');
-        if (!file_exists($uploadPath)) {
-            mkdir($uploadPath, 0775, true);
-        }
-
-        // حفظ ملف الترخيص
-        if ($request->hasFile('license_number')) {
-            $file = $request->file('license_number');
-            $fileName = time() . '_license_' . $file->getClientOriginalName();
-            $file->move($uploadPath, $fileName);
-            $data['license_number'] = 'institucions_files/' . $fileName;
-        }
-
-        // حفظ ملف السجل التجاري
-        if ($request->hasFile('commercial_record')) {
-            $file = $request->file('commercial_record');
-            $fileName = time() . '_record_' . $file->getClientOriginalName();
-            $file->move($uploadPath, $fileName);
-            $data['commercial_record'] = 'institucions_files/' . $fileName;
-        }
-
-        $model = Institucion::create($data);
-
-
-         if ($request->hasFile('excel_sheet')) {
-            try {
-                Excel::import(new InstitucionSheetImport($model->id), $request->file('excel_sheet'));
-            } catch (\Throwable $e) {
-                return redirect()->route('institucions.show', $model)
-                    ->with('warning', 'تم إنشاء جهة العمل، لكن حدث خطأ أثناء استيراد ملف الإكسل: ' . $e->getMessage());
-            }
-        }
-        return redirect()
-            ->route('institucions.show', $model)
-            ->with('success', 'تمت إضافة جهة العمل بنجاح');
     }
+
+    if (!is_null($forcedAgentId)) {
+        $request->merge(['insurance_agent_id' => $forcedAgentId]);
+    }
+
+    $agentRule = $user->hasRole('admin')
+        ? 'required|exists:insurance_agents,id'
+        : 'exists:insurance_agents,id';
+
+    $validated = $request->validate([
+        'name'               => ['required', 'string', 'max:255'],
+        'commercial_number'  => ['nullable', 'string', 'max:255', 'unique:institucions,commercial_number'],
+        'work_categories_id' => ['required', 'exists:work_categories,id'],
+        // لاحظي: عندك مكتوب subscription33 — خليه زي مشروعك
+        'subscriptions_id'   => ['required', 'exists:subscription33,id'],
+        'insurance_agent_id' => $agentRule,
+        'status'             => ['nullable', 'in:0,1'],
+
+        'license_number'     => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+        'commercial_record'  => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+
+        // ✅ جديد: فالديشن لملف الإكسل
+        'excel_sheet'        => ['nullable', 'file', 'mimes:xlsx,xls,csv', 'max:51200'],
+    ], [
+        'insurance_agent_id.required' => 'يجب اختيار وكيل تأميني.',
+    ]);
+
+    $data = $validated;
+
+    // حالة الوكيل
+    $data['status'] = $user->hasRole('Wakeel') ? 0 : (array_key_exists('status', $data) ? (int)(bool)$data['status'] : 1);
+
+    // رفع الملفات العادية
+    $uploadPath = public_path('institucions_files');
+    if (!file_exists($uploadPath)) mkdir($uploadPath, 0775, true);
+
+    if ($request->hasFile('license_number')) {
+        $f = $request->file('license_number');
+        $name = time().'_license_'.$f->getClientOriginalName();
+        $f->move($uploadPath, $name);
+        $data['license_number'] = 'institucions_files/'.$name;
+    }
+
+    if ($request->hasFile('commercial_record')) {
+        $f = $request->file('commercial_record');
+        $name = time().'_record_'.$f->getClientOriginalName();
+        $f->move($uploadPath, $name);
+        $data['commercial_record'] = 'institucions_files/'.$name;
+    }
+
+    // إنشاء الجهة
+    $model = \App\Models\Institucion::create($data);
+
+    // استيراد الإكسل (نفس الترتيب والفالديشن اللي فوق)
+    if ($request->hasFile('excel_sheet')) {
+        try {
+            Excel::import(new InstitucionSheetImport($model->id), $request->file('excel_sheet'));
+
+            // ملاحظة: لو تبي تخففي الضغط مع ملفات كبيرة:
+            // Excel::queueImport(new InstitucionSheetImport($model->id), $request->file('excel_sheet'));
+            // وشغّلي worker
+        } catch (\Throwable $e) {
+            return redirect()->route('institucions.show', $model)
+                ->with('warning', 'تم إنشاء جهة العمل، لكن حدث خطأ أثناء استيراد ملف الإكسل: '.$e->getMessage());
+        }
+    }
+
+    return redirect()->route('institucions.show', $model)
+        ->with('success', 'تمت إضافة جهة العمل بنجاح');
+}
+
 
 
     public function show(Institucion $institucion)
