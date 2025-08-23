@@ -155,7 +155,7 @@ class SmsApiServiceMadar
 	}
 	private function setApiProperties()
 	{
-		$this->url = "http://10.110.110.30:8089/cgi-bin/sendsms";
+		$this->url = "https://test.phif.gov.ly/api/otp-verification";
 
 		// $this->url = "http://156.38.58.24:8089/cgi-bin/sendsms";
 		// $this->url = "http://41.208.73.61:8030/api/bank/customersms";

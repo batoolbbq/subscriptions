@@ -32,6 +32,7 @@ Route::get('/', function () {
 
     Route::get('/CheckCustomer', [App\Http\Controllers\CustomerController::class, 'checkCustomersIdentity'])->name('check-customer');
     // Route::post('/StoreCustomer', [App\Http\Controllers\CustomerController::class, 'saveCustomersByAdmin'])->name('store-customer');
+    Route::get('/sendotp/{phone}', [App\Http\Controllers\CustomerController::class, 'sendotp'])->name('send-otp');
 
 
 Route::get('/insurance-agents/create', [InsuranceAgentsController::class, 'create'])

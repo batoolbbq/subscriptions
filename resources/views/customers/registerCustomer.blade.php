@@ -20,7 +20,6 @@
             --bg-2: #FCE8D6;
             --shadow: 0 10px 28px rgba(17, 24, 39, .07);
             --control-h: 38px;
-            /* ارتفاع الحقول المضغوطة */
         }
 
         * {
@@ -110,7 +109,6 @@
             font-weight: 700
         }
 
-        /* ===== حقول مضغوطة + أيقونات داخلة ===== */
         input,
         select {
             width: 100%;
@@ -123,8 +121,6 @@
             outline: none;
             font-family: 'Tajawal', sans-serif;
             transition: border-color .2s, box-shadow .2s;
-            -webkit-appearance: none;
-            -moz-appearance: none;
             appearance: none;
             line-height: 1;
         }
@@ -170,18 +166,6 @@
             height: var(--control-h)
         }
 
-        /* textarea خفيف */
-        textarea {
-            width: 100%;
-            min-height: 80px;
-            border: 1px solid #d7dbe0;
-            border-radius: 14px;
-            padding: 8px 12px;
-            font-family: 'Tajawal', sans-serif;
-            font-size: .9rem;
-            line-height: 1.4;
-        }
-
         .help {
             color: #9aa0a6;
             font-size: .85rem;
@@ -222,7 +206,6 @@
             background: var(--brand-600)
         }
 
-        /* زر OTP مختلف (Outline) */
         .btn-otp {
             all: unset;
             cursor: pointer;
@@ -247,7 +230,6 @@
             transform: scale(.97)
         }
 
-        /* حقل + زر بجانب بعض */
         .inline-grid {
             display: grid;
             grid-template-columns: 1fr auto;
@@ -282,10 +264,10 @@
                 </div>
 
                 <div class="card-body">
-                    <form action="{{ route('check-customer') }}" method="GET" id="signUp-form">
+                    <form action="{{ route('check-customer') }}" method="POST" id="signUp-form">
                         @csrf
 
-                        <!-- الرقم الوطني -->
+                        {{-- الرقم الوطني --}}
                         <div class="form-group">
                             <label for="nationalID">الرقم الوطني</label>
                             <div class="input-icon">
@@ -299,7 +281,7 @@
                             @enderror
                         </div>
 
-                        <!-- رقم الهاتف + زر تحقق (نفس السطر) -->
+                        {{-- رقم الهاتف + زر تحقق (OTP) --}}
                         <div class="form-group">
                             <label for="phone">رقم الهاتف</label>
                             <div class="inline-grid">
@@ -307,8 +289,8 @@
                                     <i class="fa fa-phone"></i>
                                     <input name="phone" id="phone" required maxlength="9" minlength="9"
                                         onkeypress="return onlyNumberKey(event)"
-                                        title="يرجي كتابة رقم الهاتف مطابقا (xxx xx xx )91-92-94"
-                                        pattern="(92|91|94|93)?[0-9]{7}" value="{{ old('phone') }}"
+                                        title="يرجي كتابة رقم الهاتف مطابقا (xxx xx xx )91-92-93-94-21"
+                                        pattern="(92|91|94|93|21)?[0-9]{7}" value="{{ old('phone') }}"
                                         placeholder="9xxxxxxx">
                                 </div>
                                 <button type="button" id="btn" onclick="sendotp()" class="btn-otp">تحقّق</button>
@@ -316,10 +298,10 @@
                             @error('phone')
                                 <span class="error-text" role="alert">{{ $message }}</span>
                             @enderror
-                            <small class="help">يرجي كتابة رقم الهاتف مطابقا (xxx xx xx )91-92-94</small>
+                            <small class="help">يرجي كتابة رقم الهاتف مطابقا (xxx xx xx )91-92-93-94-21</small>
                         </div>
 
-                        <!-- رمز التحقق -->
+                        {{-- رمز التحقق --}}
                         <div class="form-group">
                             <label for="otp">رمز التحقق</label>
                             <div class="input-icon">
@@ -336,7 +318,7 @@
                             <small class="help">رمز التحقق XXXXXX مدة استخدام الرمز دقيقة واحدة</small>
                         </div>
 
-                        <!-- الفئة (بعد OTP) -->
+                        {{-- الفئة --}}
                         <div class="form-group">
                             <label for="beneficiariesSupCategories">الفئة</label>
                             <div class="input-icon">
@@ -344,7 +326,10 @@
                                 <select id="beneficiariesSupCategories" name="beneficiariesSupCategories" required>
                                     <option selected value="">الرجاء اختر الفئة</option>
                                     @foreach ($customer as $items)
-                                        <option value="{{ $items->id }}">{{ $items->name }}</option>
+                                        <option value="{{ $items->id }}"
+                                            {{ old('beneficiariesSupCategories') == $items->id ? 'selected' : '' }}>
+                                            {{ $items->name }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
@@ -353,7 +338,7 @@
                             @enderror
                         </div>
 
-                        <!-- يظهر فقط عند اختيار الفئة 7 أو 8 -->
+                        {{-- نوع جهة العمل (يظهر فقط عند 7 أو 8) --}}
                         <div id="workCategoryBlock" class="form-group" style="display:none;">
                             <label for="work_category_id">نوع جهة العمل (work_categories)</label>
                             <div class="input-icon">
@@ -361,13 +346,20 @@
                                 <select id="work_category_id" name="work_category_id">
                                     <option value="">اختر نوع الجهة...</option>
                                     @foreach ($workCategories as $wc)
-                                        <option value="{{ $wc->id }}">{{ $wc->name }}</option>
+                                        <option value="{{ $wc->id }}"
+                                            {{ old('work_category_id') == $wc->id ? 'selected' : '' }}>
+                                            {{ $wc->name }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
                             <small class="help">اختر نوع الجهة ليتم تحميل جهات العمل المرتبطة.</small>
+                            @error('work_category_id')
+                                <span class="error-text">{{ $message }}</span>
+                            @enderror
                         </div>
 
+                        {{-- جهة العمل (يظهر فقط عند 7 أو 8) --}}
                         <div id="institutionBlock" class="form-group" style="display:none;">
                             <label for="institution_id">جهة العمل</label>
                             <div class="input-icon">
@@ -376,6 +368,9 @@
                                     <option value="">اختر جهة العمل...</option>
                                 </select>
                             </div>
+                            @error('institution_id')
+                                <span class="error-text">{{ $message }}</span>
+                            @enderror
                         </div>
 
                         <div class="actions">
@@ -385,11 +380,23 @@
                 </div>
             </div>
 
+            {{-- عرض أخطاء Laravel الافتراضية (إن وُجدت) --}}
+            @if ($errors->any())
+                <div
+                    style="margin-top:14px; background:#fff; border:1px solid #fca5a5; color:#991b1b; border-radius:12px; padding:10px;">
+                    <ul style="margin:0; padding-right:18px;">
+                        @foreach ($errors->all() as $error)
+                            <li style="margin:4px 0;">{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
         </div>
     </div>
 
     <script>
-        // أرقام فقط
+        // إدخال أرقام فقط
         function onlyNumberKey(e) {
             const code = e.which ? e.which : e.keyCode;
             const allowed = [8, 9, 37, 39, 46];
@@ -398,7 +405,13 @@
             return true;
         }
 
-        // بيانات محملة مسبقًا من السيرفر
+        // زر إرسال OTP (عدّليها حسب API عندك)
+        function sendotp() {
+            // TODO: Ajax لطلب إرسال OTP حسب نظامك
+            alert('سيتم إرسال رمز تحقق عبر SMS (مثال)');
+        }
+
+        // بيانات الجهات محمّلة مسبقًا
         const INSTITUCIONS = @json($institucions);
 
         (function() {
@@ -408,6 +421,7 @@
             const instBlock = document.getElementById('institutionBlock');
             const instSelect = document.getElementById('institution_id');
 
+            // الفئات التي تتبع جهة عمل (عدّلي IDs لو مختلفة)
             const needsWorkCat = id => id === '7' || id === '8';
 
             function fillOptions(selectEl, items, placeholder) {
@@ -415,7 +429,8 @@
                 for (const it of items) {
                     const id = (it.id ?? '').toString();
                     const name = (it.name ?? it.title ?? '').toString();
-                    opts.push(`<option value="${id}">${name}</option>`);
+                    const selected = "{{ old('institution_id') }}" === id ? 'selected' : '';
+                    opts.push(`<option value="${id}" ${selected}>${name}</option>`);
                 }
                 selectEl.innerHTML = opts.join('');
             }
@@ -448,11 +463,10 @@
                 fillOptions(instSelect, list, 'اختر جهة العمل...');
             });
 
-            // دعم old() لو رجعت من فشل فاليديشن
+            // دعم old() بعد فشل التحقق — يعيد إظهار خيارات جهة العمل تلقائيًا
             document.addEventListener('DOMContentLoaded', () => {
                 const oldCat = "{{ old('beneficiariesSupCategories') }}";
                 const oldWc = "{{ old('work_category_id') }}";
-                const oldInst = "{{ old('institution_id') }}";
 
                 if (oldCat && needsWorkCat(oldCat)) {
                     wcBlock.style.display = '';
@@ -464,14 +478,37 @@
                         wcSelect.value = oldWc;
                         const list = INSTITUCIONS.filter(x => String(x.work_categories_id) === String(oldWc));
                         fillOptions(instSelect, list, 'اختر جهة العمل...');
-                        if (oldInst) {
-                            instSelect.value = oldInst;
-                        }
                     }
                 }
             });
         })();
     </script>
 </body>
+
+<script>
+function sendotp() {
+    let phone = document.getElementById('phone').value;
+
+    if (phone === '') {
+        alert('الرجاء إدخال رقم الهاتف');
+        return;
+    }
+
+    // نحط رقم الهاتف في الـ URL
+    fetch("{{ url('/sendotp') }}/" + phone)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById("demo").innerText = "✅ " + data.message;
+        } else {
+            document.getElementById("demo").innerText = "❌ " + data.message;
+        }
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        document.getElementById("demo").innerText = "❌ حدث خطأ غير متوقع";
+    });
+}
+</script>
 
 </html>

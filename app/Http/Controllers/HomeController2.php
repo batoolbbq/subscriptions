@@ -1,48 +1,56 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Frontend;
+
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-// use App\Http\Controllers\NidController;
+use App\Http\Controllers\Frontend\NidController;
 use App\Models\Bloodtype;
+use App\Models\Chronicdiseases;
 use App\Models\City;
 use App\Models\Customer;
 use App\Models\CustomerAudit;
+use App\Models\medicalexamination;
+use App\Models\medicalHistoryProfile; //add this instead of medicalexamination
 use App\Models\guarantybranch;
+use App\Models\Healthfacilities;
+use App\Models\Medicalprofile;
 use App\Models\Municipal;
 use App\Models\Nationality;
+use App\Models\retired;
+use App\Models\Retiredfile;
+use App\Models\Socialstatus;
 use App\Models\Verification;
 use App\Models\SalNumber as Sal;
+use App\Models\dead_retirees;
 use App\Models\salaryNumber;
 use App\Models\beneficiariesCategories;
 use App\Models\beneficiariesSupCategories;
-use App\Models\InsuranceAgents;
-use App\Models\WorkCategory;
-use App\Models\Institucion;
-
+use App\Models\Warrantyoffice;
+use App\Models\InsuranceAgentCompany;
 
 use App\Services\CustomerretiredService;
 use App\Services\SmsApiServiceLibyana;
 use Carbon\Carbon;
 use Complex\Functions;
 use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use RealRashid\SweetAlert\Facades\Alert;
 use Session;
 use App\Services\SmsApiServiceMadar;
 
-class CustomerController extends Controller
+class HomeController extends Controller
 {
+
     private $sms;
     private $sms2;
-    // private $nid;
+    private $nid;
     public $data;
-    // NidController $nid
-    public function __construct(SmsApiServiceMadar $api, SmsApiServiceLibyana $api2)
+    public function __construct(SmsApiServiceMadar $api, SmsApiServiceLibyana $api2, NidController $nid)
     {
         $this->sms = $api;
         $this->sms2 = $api2;
-        // $this->nid = $nid;
+        $this->nid = $nid;
 
     }
 
@@ -68,10 +76,6 @@ class CustomerController extends Controller
         // return view('frontend.index');
     }
 
-
-    // App\Http\Controllers\RegisterController.php
-
-
     public function registerCustomerByAdmin()
     {
    
@@ -83,12 +87,8 @@ class CustomerController extends Controller
      public function registerCustomerByAdmin2()
     {
 
-        $customer = beneficiariesCategories::all();
-            $workCategories  = WorkCategory::select('id','name')->orderBy('name')->get();
-    $institucions    = Institucion::select('id','name','work_categories_id')->orderBy('name')->get();
-
-        return view('customers.registerCustomer', compact(
-        'customer', 'workCategories', 'institucions'));
+        $InsuranceAgentCompany = InsuranceAgentCompany::all();
+        return view('dashbord.InsuranceAgents2.registerCustomer', ['beneficiariesSupCategories' => $InsuranceAgentCompany]);
 
     }
 
@@ -118,7 +118,7 @@ class CustomerController extends Controller
         ], $messages);
 
 
-        $customer = Customer::where('phone',915040043)->first();
+        $customer = Customer::where('phone', $request->phone)->first();
 
         if ($customer != null) {
             //dd($customer);
@@ -213,153 +213,115 @@ class CustomerController extends Controller
     {
 
         $beneficiariesSupCategories = beneficiariesSupCategories::where('beneficiaries_categories_id' , 3)->get();
-        return view('customers.registerCustomer', ['beneficiariesSupCategories' => $beneficiariesSupCategories]);
+        return view('frontend.registerCustomerTum', ['beneficiariesSupCategories' => $beneficiariesSupCategories]);
 
     }
     
     
         public function checkIdentity(Request $request)
     {
-        $messages = [
-            'phone.required' => "الرجاء ادخال رقم الهاتف",
-            'phone.starts_with' => "رقم الهاتف يجب أن يبدأ بـ 91 أو 92 أو 93 أو 94 أو 21",
-            'nationalID.required' => "الرجاء ادخال رقم الوطني",
-            'nationalID.unique' => "الرقم الوطني مستخدم من قبل",
-            'otp.required' => "الرجاء ادخال الرمز ",
-            'work_category_id.required_if' => 'يرجى اختيار نوع جهة العمل للفئات 7 أو 8',
-            'institution_id.required_if'   => 'يرجى اختيار جهة العمل للفئات 7 أو 8',
-        ];
+        // dd($request->all());
 
+        $messages = [
+            'nationalID.required' => "الرجاء ادخال رقم الوطني"
+        ];
         $this->validate($request, [
-            'phone'                      => 'required|digits_between:9,9|numeric|starts_with:91,92,94,21,93',
-            'nationalID'                 => ['required','unique:customers,nationalID','digits_between:12,12','starts_with:2,1'],
-            'otp'                        => 'required|digits_between:6,6',
-            'beneficiariesSupCategories' => ['required'],
-            'work_category_id'           => 'required_if:beneficiariesSupCategories,7,8|nullable',
-            'institution_id'             => 'required_if:beneficiariesSupCategories,7,8|nullable',
+            'nationalID' => ['required', 'unique:customers', 'digits_between:12,12', 'starts_with:2,1'],
         ], $messages);
 
+        $warrantynumber = null;
+
         $customer = Customer::where('phone', $request->phone)->first();
-        if ($customer) {
-            Alert::error('رقم الهاتف مسجل مسبقاً');
-            return redirect()->back()->withInput();
-        }
 
-        $ve = Verification::where('phone', $request->phone)->first();
-        if (!$ve) {
-            Alert::error('لم يتم إرسال رمز تحقق لهذا الرقم');
-            return redirect()->route('register-customer')->withInput();
-        }
+        $nidAr = $this->nid->getNidData($request->nationalID);
+        $nidEn = $this->nid->getNidEnData($request->nationalID);
+        $nationality = Nationality::orderBy('name', 'ASC')->get();
+        $bloodtype = Bloodtype::orderBy('name', 'ASC')->get();
+        $city = City::orderBy('name', 'ASC')->get();
+        $socialstatuses = Socialstatus::orderBy('name', 'ASC')->get();
+        $beneficiariesSupCategories = beneficiariesSupCategories::all();
+        // if($){}
 
-        $expiresAt = Carbon::parse($ve->otp_time)->addMinute(2);
-        if (now()->gte($expiresAt)) {
-            $ve->otp = mt_rand(100000, 999999);
-            $ve->save();
-            Alert::error('لقد انتهت صلاحية رمز التحقق');
-            return redirect()->route('register-customer')->withInput();
-        }
-        if ($ve->otp != $request->otp) {
-            Alert::error('رمز التحقق غير صحيح الرجاء التأكد');
-            return redirect()->route('register-customer')->withInput();
-        }
-        $ve->save();
-        Alert::success('تمت عملية التحقق بنجاح');
+        // warrantynumber .. retired
+        $warrantyoffices = Warrantyoffice::orderBy('name', 'ASC')->get();
+        $healthfacilities = Healthfacilities::orderBy('name', 'ASC')->get();
+        $guarantybranch = guarantybranch::orderBy('name', 'ASC')->get();
+        $Chronicdiseases = Chronicdiseases::all();
 
-        // NID (اختياري – نفس منطقك)
-        $nidAr = $this->nid ? $this->nid->getNidData($request->nationalID) : null;
-        $nidEn = $this->nid ? $this->nid->getNidEnData($request->nationalID) : null;
-        if ($this->nid && $nidAr == "Nid Not Found!") {
-            Alert::error('هذا الرقم غير موجود الرجاء التأكد');
-            return redirect()->back()->withInput();
-        }
-        if ($this->nid && $nidAr && !$nidAr->isLife) {
+        try {
+
+            if ($nidAr == "Nid Not Found!") {
+                Alert::error('هذا الرقم غير موجود الرجاء التأكد');
+                return redirect()->back();
+            } else if ($nidAr->isLife) {
+                $fullNameArabic = $nidAr->firstName . ' ' . $nidAr->fatherName . ' ' . $nidAr->grandFatherName . ' ' . $nidAr->surName;
+                $fullNameEnglish = $nidEn->FirstNameEn . ' ' . $nidEn->FatherNameEn . ' ' . $nidEn->GrandFatherNameEn . ' ' . $nidEn->SurNameEn;
+                $birtdateandtiem = explode("T00", $nidAr->birthDate);
+                $birtdate = $birtdateandtiem['0'];
+                $gendertype = substr($nidAr->nationalID, 0, 1);
+
+                $Customer = null;
+
+                if ($request->beneficiariesSupCategories == 2) {
+                    if ($nidAr->nationalID[0] != 2) {
+
+                        Alert::error(' نأسف لايمكنك الاستفادة من الخدمة ');
+                        return redirect()->back();
+
+                    }
+                    $Customer = Customer::where('registrationnumbers', $nidAr->quidNumber)->where('gender', 1)->first();
+                    if (!isset($Customer)) {
+                        Alert::error(' المشترك الرئيسي غير مسجل ');
+                        return redirect()->back();
+                    }
+                }
+                if ($request->beneficiariesSupCategories == 3) {
+                    if ($nidAr->nationalID[0] != 2) {
+                        Alert::error(' نأسف لايمكنك الاستفادة من الخدمة ');
+                        return redirect()->back();
+                    }
+
+                    $warrantynumber = dead_retirees::where('registrationnumbers', $nidAr->quidNumber)->first();
+
+                    //  if(isset($warrantynumber)) 1; else Alert::error(' نأسف لايمكنك الاستفادة من الخدمة ');  return redirect()->back(); 
+
+                }
+
+
+
+
+                return view('frontend.registerCustomersByAdmin')
+                    ->with('bloodtype', $bloodtype)
+                    ->with('city', $city)
+                    ->with('socialstatuses', $socialstatuses)
+                    ->with('nationality', $nationality)
+                    ->with('fullNameArabic', $fullNameArabic)
+                    ->with('fullNameEnglish', $fullNameEnglish)
+                    ->with('birtdate', $birtdate)
+                    ->with('gendertype', $gendertype)
+                    ->with('nidAr', $nidAr)
+                    ->with('nidEn', $nidEn)
+                    ->with('phoneNum', $request->phone)
+                    ->with('Chronicdiseases', $Chronicdiseases)
+                    ->with('guarantybranch', $guarantybranch)
+                    ->with('warrantyoffices', $warrantyoffices)
+                    ->with('healthfacilities', $healthfacilities)
+                    ->with('beneficiariesSupCategories', $beneficiariesSupCategories)
+                    ->with('beneficiariesSupCategoriesType', $request->beneficiariesSupCategories)
+                    ->with('Customer', $Customer)
+                    ->with('warrantynumber', $warrantynumber);
+
+            } else {
+                Alert::error('لايمكنك الاستفادة من الخدمة ');
+                return redirect()->back();
+            }
+        } catch (Exception $e) {
             Alert::error('لايمكنك الاستفادة من الخدمة ');
-            return redirect()->back()->withInput();
+            return redirect()->back();
+
         }
 
-        $fullNameArabic = $fullNameEnglish = $birtdate = $gendertype = null;
-        if ($this->nid && $nidAr) {
-            $fullNameArabic  = $nidAr->firstName.' '.$nidAr->fatherName.' '.$nidAr->grandFatherName.' '.$nidAr->surName;
-            $fullNameEnglish = $nidEn ? ($nidEn->FirstNameEn.' '.$nidEn->FatherNameEn.' '.$nidEn->GrandFatherNameEn.' '.$nidEn->SurNameEn) : null;
-            $parts = explode('T00', $nidAr->birthDate); $birtdate = $parts[0] ?? null;
-            $gendertype = substr($nidAr->nationalID, 0, 1);
-        }
-
-        // منطقك القديم للفئات 2 و 3 (اختياري)
-        $Customer = null; $warrantynumber = null;
-        if ((int)$request->beneficiariesSupCategories === 2 && $this->nid && $nidAr) {
-            if ($nidAr->nationalID[0] != 2) { Alert::error(' نأسف لايمكنك الاستفادة من الخدمة '); return back()->withInput(); }
-            $Customer = Customer::where('registrationnumbers',$nidAr->quidNumber)->where('gender',1)->first();
-            if (!$Customer) { Alert::error(' المشترك الرئيسي غير مسجل '); return back()->withInput(); }
-        }
-        if ((int)$request->beneficiariesSupCategories === 3 && $this->nid && $nidAr) {
-            if ($nidAr->nationalID[0] != 2) { Alert::error(' نأسف لايمكنك الاستفادة من الخدمة '); return back()->withInput(); }
-            $warrantynumber = dead_retirees::where('registrationnumbers',$nidAr->quidNumber)->first();
-        }
-
-        // ✅ الشيك من الشيت: فقط لو الفئة تتبع جهة عمل (مثال 7 أو 8)
-        $insured_no = $pension_no = $account_no = $total_pension = null;
-        $needsInstitution = in_array((string)$request->beneficiariesSupCategories, ['7','8'], true);
-
-        if ($needsInstitution) {
-            if (!$request->institution_id) {
-                Alert::error('الرجاء اختيار جهة العمل للفئات المحددة (7 أو 8)');
-                return back()->withInput();
-            }
-            $row = InstitucionSheetRow::where('national_id',$request->nationalID)
-                    ->where('institucion_id',$request->institution_id)
-                    ->first();
-            if (!$row) {
-                Alert::error('لم يتم العثور على بيانات مطابقة في الشيت (الرقم الوطني + جهة العمل)');
-                return back()->withInput();
-            }
-            $insured_no    = $row->insured_no;
-            $pension_no    = $row->pension_no;
-            $account_no    = $row->account_no;
-            $total_pension = $row->total_pension;
-        }
-        // غير ذلك: ما فيش شيك شيت — تبقى القيم null
-
-        // قوائمك المعتادة
-        $nationality      = Nationality::orderBy('name','ASC')->get();
-        $bloodtype        = Bloodtype::orderBy('name','ASC')->get();
-        $city             = City::orderBy('name','ASC')->get();
-        $socialstatuses   = Socialstatus::orderBy('name','ASC')->get();
-        $beneficiariesSC  = beneficiariesSupCategories::all();
-        $warrantyoffices  = Warrantyoffice::orderBy('name','ASC')->get();
-        $healthfacilities = Healthfacilities::orderBy('name','ASC')->get();
-        $guarantybranch   = guarantybranch::orderBy('name','ASC')->get();
-        $Chronicdiseases  = Chronicdiseases::all();
-
-        return view('frontend.registerCustomersByAdmin')
-            ->with('bloodtype',$bloodtype)
-            ->with('city',$city)
-            ->with('socialstatuses',$socialstatuses)
-            ->with('nationality',$nationality)
-            ->with('fullNameArabic',$fullNameArabic)
-            ->with('fullNameEnglish',$fullNameEnglish)
-            ->with('birtdate',$birtdate)
-            ->with('gendertype',$gendertype)
-            ->with('nidAr',$nidAr)
-            ->with('nidEn',$nidEn)
-            ->with('phoneNum',$request->phone)
-            ->with('Chronicdiseases',$Chronicdiseases)
-            ->with('guarantybranch',$guarantybranch)
-            ->with('warrantyoffices',$warrantyoffices)
-            ->with('healthfacilities',$healthfacilities)
-            ->with('beneficiariesSupCategories',$beneficiariesSC)
-            ->with('beneficiariesSupCategoriesType',$request->beneficiariesSupCategories)
-            ->with('Customer',$Customer)
-            ->with('warrantynumber',$warrantynumber)
-            // قيم الشيت (تكون null لو الفئة لا تتبع جهة عمل)
-            ->with('insured_no',$insured_no)
-            ->with('pension_no',$pension_no)
-            ->with('account_no',$account_no)
-            ->with('total_pension',$total_pension);
     }
-
-
-
 
 
     public function checkCustomersIdentity(Request $request)
@@ -419,7 +381,9 @@ class CustomerController extends Controller
         $city = City::orderBy('name', 'ASC')->get();
         $socialstatuses = Socialstatus::orderBy('name', 'ASC')->get();
         $beneficiariesSupCategories = beneficiariesSupCategories::all();
+        // if($){}
 
+        // warrantynumber .. retired
         $warrantyoffices = Warrantyoffice::orderBy('name', 'ASC')->get();
         $healthfacilities = Healthfacilities::orderBy('name', 'ASC')->get();
         $guarantybranch = guarantybranch::orderBy('name', 'ASC')->get();
@@ -460,6 +424,7 @@ class CustomerController extends Controller
 
                     $warrantynumber = dead_retirees::where('registrationnumbers', $nidAr->quidNumber)->first();
 
+                    //  if(isset($warrantynumber)) 1; else Alert::error(' نأسف لايمكنك الاستفادة من الخدمة ');  return redirect()->back(); 
 
                 }
 
@@ -525,6 +490,8 @@ class CustomerController extends Controller
             $customer = Customer::where('phone', $request->phone)->first();
 
             if ($customer != null) {
+                //dd($customer);
+                // return response()->json(['message' => 'رقم الهاتف مسجل مسبقا'], 500);
                 Alert::error('رقم الهاتف مسجل مسبقاً');
                 return redirect()->back();
             }
@@ -539,6 +506,8 @@ class CustomerController extends Controller
 
                     $ve->otp = mt_rand(100000, 999999);
                     $ve->save();
+                    // Alert::error('لقد انتهت صلاحية رمز التحقق');
+                    // return redirect()->route('RegisterBeneficiary');
 
                 } else {
 
@@ -1602,7 +1571,7 @@ class CustomerController extends Controller
     public function searchBeneficiary()
     {
 
-        return view('customers.search');
+        return view('dashbord.customers.search');
 
     }
     public function getbeneficiaries($id)
@@ -1621,9 +1590,7 @@ class CustomerController extends Controller
     {
         // dd($request);
 
-        return view('customers.index', ['data' => $request->regnumber]);
+        return view('dashbord.customers.index', ['data' => $request->regnumber]);
 
     }
 }
-
-
