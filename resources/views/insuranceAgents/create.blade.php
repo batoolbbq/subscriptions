@@ -16,20 +16,28 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
     <style>
+        /* ====== Theme (Logo colors + modern UI) ====== */
         :root {
             --brand: #F58220;
-            --ink: #111827;
+            /* برتقالي أساسي */
+            --brand-600: #ff8f34;
+            /* أغمق للهوفر */
+            --brown: #8C5346;
+            /* بني سابق للعناوين */
+            --ink: #1F2328;
             --muted: #6b7280;
             --muted-2: #9ca3af;
-            --border: #E5E7EB;
             --panel: #ffffff;
-            --bg: #f8fafc;
-            --soft-1: #FFF7EE;
-            --soft-2: #FCE8D6;
-            --shadow: 0 10px 28px rgba(17, 24, 39, .07);
-            --radius: 14px;
-            --radius-sm: 10px;
-            --focus: 0 0 0 4px rgba(245, 130, 32, .16);
+            --border: #E5E7EB;
+            --bg-1: #FFF7EE;
+            /* خلفية دافئة */
+            --bg-2: #FCE8D6;
+            --radius-xl: 24px;
+            --radius-md: 16px;
+            --radius-sm: 12px;
+            --shadow-lg: 0 18px 40px rgba(0, 0, 0, .12);
+            --shadow-md: 0 10px 28px rgba(0, 0, 0, .08);
+            --focus: 0 0 0 4px rgba(245, 130, 32, .18);
         }
 
         * {
@@ -43,17 +51,22 @@
 
         body {
             margin: 0;
-            background: var(--bg);
             color: var(--ink);
             font-family: 'Tajawal', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
             line-height: 1.65;
+            /* خلفية لامعة بألوان الشعار */
+            background:
+                radial-gradient(1100px 560px at 85% 12%, rgba(140, 83, 70, .18), transparent 60%),
+                radial-gradient(900px 520px at 12% 88%, rgba(245, 130, 32, .22), transparent 60%),
+                linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 42%, #ffd8b6 78%, #ffe4cc 100%);
+            background-attachment: fixed;
         }
 
         .page {
             min-height: 100dvh;
             display: grid;
             place-items: center;
-            padding: 24px;
+            padding: 28px;
         }
 
         .form-wrap {
@@ -64,68 +77,79 @@
 
         .title-area {
             text-align: center;
-            margin-bottom: 18px;
+            margin-bottom: 16px
         }
 
         .title-area h3 {
-            margin: 0 0 .25rem;
+            margin: 0 0 6px;
             font-weight: 800;
             letter-spacing: .2px;
-            color: #ac584b;
-            font-size: 1.55rem;
+            color: var(--brown);
+            font-size: 1.7rem;
         }
 
         .title-area p {
             margin: 0;
             color: var(--muted);
-            font-size: .98rem;
+            font-size: .98rem
         }
 
         .cardy {
             background: var(--panel);
             border: 1.5px solid var(--border);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-lg);
             overflow: hidden;
             margin-bottom: 18px;
         }
 
+        /* ترويسة الكارد برتقالي متدرج قوي */
         .cardy-header {
-            background: linear-gradient(180deg, var(--soft-1), var(--soft-2));
-            padding: 12px 16px;
+            background: linear-gradient(135deg,
+                    #d95b00 0%,
+                    /* غامق */
+                    #F58220 35%,
+                    /* برتقالي الشعار */
+                    #FF8F34 70%,
+                    /* أفتح */
+                    #ffb066 100%
+                    /* أفتح جداً */
+                );
+            color: #fff;
+            padding: 14px 18px;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
             font-weight: 800;
-            color: var(--ink);
         }
 
         .cardy-header .icon {
-            background: var(--brand);
+            background: #FF8F34;
+            /* وسط التدرج */
             color: #fff;
-            width: 30px;
-            height: 30px;
+            width: 34px;
+            height: 34px;
             display: grid;
             place-items: center;
             border-radius: 999px;
-            font-size: .9rem;
-            box-shadow: 0 6px 14px rgba(245, 130, 32, .28);
+            font-size: .95rem;
+            box-shadow: 0 10px 22px rgba(245, 130, 32, .35);
         }
 
         .cardy-body {
-            padding: 18px;
+            padding: 22px 20px 26px
         }
 
         .grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 14px;
+            gap: 14px
         }
 
         @media (min-width:720px) {
             .grid-2 {
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: 1fr 1fr
             }
         }
 
@@ -137,19 +161,33 @@
             font-weight: 700;
         }
 
+        /* حقول بشكل pill */
         .form-control,
         .form-select,
         textarea {
             width: 100%;
             border: 1px solid #d7dbe0;
-            border-radius: var(--radius-sm);
-            padding: 11px 12px;
+            background: #fdfdfd;
+            border-radius: 999px;
+            /* pill */
+            padding: 12px 14px;
             font-size: 1rem;
-            background: #fff;
-            transition: border-color .2s, box-shadow .2s, background .2s;
+            transition: border-color .2s, box-shadow .2s, background .2s, transform .1s;
             outline: none;
         }
 
+        textarea {
+            border-radius: var(--radius-md)
+        }
+
+        /* خلي خيارات الـselect و النص الافتراضي بنفس خط Tajawal */
+        .form-select,
+        .form-select option {
+            font-family: 'Tajawal', sans-serif;
+            font-weight: 500;
+        }
+
+        /* مساحة نص أكبر بحواف لينة */
         .form-control:focus,
         .form-select:focus,
         textarea:focus {
@@ -157,25 +195,17 @@
             box-shadow: var(--focus);
         }
 
-        /* ملف مرفوع – اسم الملف */
-        .file-name {
-            margin-top: 6px;
-            font-size: .85rem;
-            color: #7b7f86;
-            display: none;
-        }
-
         .help {
             color: #9aa0a6;
             font-size: .85rem;
             margin-top: 6px;
-            display: block;
+            display: block
         }
 
         #docs-card {
             border: 1.5px solid var(--border);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-md);
             margin-bottom: 16px;
             background: #fff;
             overflow: hidden;
@@ -185,77 +215,141 @@
             all: unset;
             display: inline-block;
             cursor: pointer;
-            padding: 12px 22px;
-            border-radius: 999px;
-            font-weight: 800;
-            font-size: 1rem;
             text-align: center;
-            transition: transform .18s ease, background .18s ease, box-shadow .18s ease, color .18s ease;
+            padding: 13px 26px;
+            border-radius: 999px;
+            font-weight: 900;
+            font-size: 1rem;
+            letter-spacing: .3px;
+            transition: transform .15s, background .15s, box-shadow .15s, color .15s;
         }
 
         .btn-primary {
             background: var(--brand);
             color: #fff;
-            box-shadow: 0 8px 18px rgba(245, 130, 32, .25);
+            box-shadow: 0 12px 26px rgba(245, 130, 32, .30);
         }
 
         .btn-primary:hover {
             transform: translateY(-1px);
-            background: #ff8f34;
+            background: var(--brand-600)
         }
 
         .btn-primary:active {
-            transform: translateY(0);
+            transform: translateY(0)
         }
 
         .text-center {
-            text-align: center;
+            text-align: center
         }
 
         /* تنبيهات */
         .alert {
             padding: 12px 14px;
-            border-radius: 10px;
-            font-weight: 700;
+            border-radius: 14px;
+            font-weight: 800;
             margin-bottom: 1rem;
             text-align: center;
             border: 1.5px solid;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, .03);
+            box-shadow: var(--shadow-md);
         }
 
         .alert.ok {
             background: #e9fbf2;
             border-color: #86efac;
-            color: #10734a;
+            color: #10734a
         }
 
         .alert.err {
             background: #fef2f2;
             border-color: #fecaca;
-            color: #991b1b;
+            color: #991b1b
         }
 
         .error-text {
             color: #b91c1c;
             font-size: .85rem;
             margin-top: 6px;
-            font-weight: 700;
+            font-weight: 700
         }
 
         .skeleton {
             display: none;
-            height: 40px;
+            height: 42px;
             border: 1px dashed var(--border);
-            border-radius: var(--radius-sm);
-            background: #f3f6fa;
+            border-radius: 999px;
+            background: #fff5eb;
+            color: #a0765f;
             align-items: center;
             justify-content: center;
             font-size: .9rem;
-            color: var(--muted-2);
         }
 
         .skeleton.show {
+            display: flex
+        }
+
+        /* Placeholder text inside inputs & textarea & select */
+        .form-control::placeholder,
+        textarea::placeholder,
+        .form-select::placeholder {
+            font-family: 'Tajawal', sans-serif;
+            font-weight: 400;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        /* ====== رفع الملفات: زر أنيق مع أيقونة ====== */
+        input[type="file"] {
+            display: none
+        }
+
+        /* نخفي الحقل الأصلي */
+        .file-actions {
             display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .file-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 12px 18px;
+            border-radius: 999px;
+            /* pill */
+            background: var(--brand);
+            color: #fff;
+            font-weight: 700;
+            font-size: .95rem;
+            transition: background .2s, transform .2s, box-shadow .2s;
+            box-shadow: 0 8px 18px rgba(245, 130, 32, .22);
+        }
+
+        .file-label:hover {
+            background: var(--brand-600);
+            transform: translateY(-1px)
+        }
+
+        .file-label i {
+            font-size: 1rem
+        }
+
+        /* اسم الملف بعد الاختيار */
+        .file-name {
+            margin-top: 6px;
+            font-size: .85rem;
+            color: #555;
+            font-weight: 600;
+            display: none;
+        }
+
+        .file-hint {
+            color: #9aa0a6;
+            font-size: .8rem;
+            margin-top: 4px
         }
     </style>
 </head>
@@ -375,43 +469,71 @@
                         </div>
                         <div class="cardy-body">
                             <div class="grid grid-2">
+
+                                <!-- شهادة ميلاد -->
                                 <div class="form-group">
-                                    <label for="Birth_creature">شهادة ميلاد</label>
-                                    <input class="form-control @error('Birth_creature') is-invalid @enderror"
-                                        type="file" id="Birth_creature" name="Birth_creature"
-                                        accept=".jpg,.jpeg,.png" required>
+                                    <label>شهادة ميلاد</label>
+                                    <div class="file-actions">
+                                        <label for="Birth_creature" class="file-label">
+                                            <i class="fa fa-id-card"></i> اختر ملف
+                                        </label>
+                                    </div>
+                                    <input class="@error('Birth_creature') is-invalid @enderror" type="file"
+                                        id="Birth_creature" name="Birth_creature" accept=".jpg,.jpeg,.png" required>
                                     <div class="file-name" data-file="Birth_creature"></div>
+                                    <div class="file-hint">الامتدادات المسموحة: JPG, JPEG, PNG</div>
                                     @error('Birth_creature')
                                         <div class="error-text">{{ $message }}</div>
                                     @enderror
                                 </div>
 
+                                <!-- المؤهل العلمي -->
                                 <div class="form-group">
-                                    <label for="qualification">المؤهل العلمي</label>
-                                    <input class="form-control @error('qualification') is-invalid @enderror"
-                                        type="file" id="qualification" name="qualification"
-                                        accept=".jpg,.jpeg,.png" required>
+                                    <label>المؤهل العلمي</label>
+                                    <div class="file-actions">
+                                        <label for="qualification" class="file-label">
+                                            <i class="fa fa-graduation-cap"></i> اختر ملف
+                                        </label>
+                                    </div>
+                                    <input class="@error('qualification') is-invalid @enderror" type="file"
+                                        id="qualification" name="qualification" accept=".jpg,.jpeg,.png" required>
                                     <div class="file-name" data-file="qualification"></div>
+                                    <div class="file-hint">الامتدادات المسموحة: JPG, JPEG, PNG</div>
                                     @error('qualification')
                                         <div class="error-text">{{ $message }}</div>
                                     @enderror
                                 </div>
 
+                                <!-- صورة للمكان -->
                                 <div class="form-group">
-                                    <label for="image">صورة للمكان</label>
-                                    <input class="form-control @error('image') is-invalid @enderror" type="file"
-                                        id="image" name="image" accept=".jpg,.jpeg,.png" required>
+                                    <label>صورة للمكان</label>
+                                    <div class="file-actions">
+                                        <label for="image" class="file-label">
+                                            <i class="fa fa-building"></i> اختر ملف
+                                        </label>
+                                    </div>
+                                    <input class="@error('image') is-invalid @enderror" type="file" id="image"
+                                        name="image" accept=".jpg,.jpeg,.png" required>
                                     <div class="file-name" data-file="image"></div>
+                                    <div class="file-hint">الامتدادات المسموحة: JPG, JPEG, PNG</div>
                                     @error('image')
                                         <div class="error-text">{{ $message }}</div>
                                     @enderror
                                 </div>
+
+                                <!-- شهادة التأمين -->
                                 <div class="form-group">
-                                    <label for="Insurance_certificate">شهادة التأمين</label>
-                                    <input class="form-control @error('Insurance_certificate') is-invalid @enderror"
+                                    <label>شهادة التأمين</label>
+                                    <div class="file-actions">
+                                        <label for="Insurance_certificate" class="file-label">
+                                            <i class="fa fa-shield-alt"></i> اختر ملف
+                                        </label>
+                                    </div>
+                                    <input class="@error('Insurance_certificate') is-invalid @enderror"
                                         type="file" id="Insurance_certificate" name="Insurance_certificate"
                                         accept=".jpg,.jpeg,.png" required>
                                     <div class="file-name" data-file="Insurance_certificate"></div>
+                                    <div class="file-hint">الامتدادات المسموحة: JPG, JPEG, PNG</div>
                                     @error('Insurance_certificate')
                                         <div class="error-text">{{ $message }}</div>
                                     @enderror
