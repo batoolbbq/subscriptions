@@ -1,197 +1,301 @@
 @extends('layouts.master')
 
-@section('title', 'جهات العمل')
+@section('title', 'إضافة جهة عمل')
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
 @section('content')
     <div class="container py-4"
-        style="--ink:#111827;--line:#e5e7eb;
-            --amber-50:#fff5e6;--amber-200:#ffd8a8;--amber-800:#92400E;
-            --gray-50:#eff2f6;--gray-700:#374151;--brand:#F58220;">
+        style="font-family: 'Tajawal', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:#8C5346;">
 
-        {{-- رسالة نجاح --}}
-        @if (session('success'))
-            <div class="alert alert-success" style="border:1.5px solid var(--green-700);border-radius:8px;">
-                {{ session('success') }}
-            </div>
-        @endif
+        {{-- العنوان وزر الرجوع --}}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div>
+                <h3 style="margin:0;font-weight:800;color:8C5346;">إضافة جهة عمل</h3>
 
-        {{-- العنوان + الفلاتر + زر إضافة --}}
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap" style="gap:10px;">
-            <h3 style="color:#92400E;font-weight:700;margin:0; margin-bottom:14px;">
-                جهات العمل
-            </h3>
-
-            <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                <a href="{{ route('institucions.index') }}"
-                    style="padding:8px 16px;border-radius:999px;font-weight:700;
-                  background:{{ request('status') == null ? '#F58220' : '#f3f4f6' }};
-                  color:{{ request('status') == null ? '#fff' : '#374151' }};
-                  border:1.5px solid {{ request('status') == null ? '#F58220' : '#d1d5db' }};
-                  text-decoration:none;">
-                    الكل
-                </a>
-                <a href="{{ route('institucions.index', ['status' => 'active']) }}"
-                    style="padding:8px 16px;border-radius:999px;font-weight:700;
-                  background:{{ request('status') == 'active' ? '#F58220' : '#f3f4f6' }};
-                  color:{{ request('status') == 'active' ? '#fff' : '#374151' }};
-                  border:1.5px solid {{ request('status') == 'active' ? '#F58220' : '#d1d5db' }};
-                  text-decoration:none;">
-                    مفعلة
-                </a>
-                <a href="{{ route('institucions.index', ['status' => 'inactive']) }}"
-                    style="padding:8px 16px;border-radius:999px;font-weight:700;
-                  background:{{ request('status') == 'inactive' ? '#F58220' : '#f3f4f6' }};
-                  color:{{ request('status') == 'inactive' ? '#fff' : '#374151' }};
-                  border:1.5px solid {{ request('status') == 'inactive' ? '#F58220' : '#d1d5db' }};
-                  text-decoration:none;">
-                    غير مفعلة
-                </a>
             </div>
 
-            <a href="{{ route('institucions.create') }}"
-                style="all:unset;display:inline-flex;align-items:center;gap:8px;cursor:pointer;
-                       background:var(--brand);color:#fff;padding:10px 18px;border-radius:999px;
-                       font-weight:900;text-decoration:none;box-shadow:0 12px 26px rgba(245,130,32,.30);">
-                <i class="fa fa-plus"></i> إضافة جهة عمل
+
+            <a href="{{ route('institucions.index') }}"
+                style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#111827;border:1.5px solid #D0D5DD;border-radius:999px;padding:8px 14px;font-weight:800;text-decoration:none;box-shadow:0 8px 18px rgba(0,0,0,.06);">
+                <i class="fa fa-arrow-right"></i> رجوع للقائمة
             </a>
         </div>
 
-        {{-- جدول البيانات --}}
-        <div
-            style="border:2px solid var(--line);border-radius:14px;
-                box-shadow:0 6px 20px rgba(17,24,39,.05);overflow:hidden;">
-            <div class="table-responsive">
-                <table id="institucionsTable" class="table table-bordered table-hover table-custom" style="margin:0;">
-                    <thead>
-                        <tr>
-                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">#
-                            </th>
-                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">
-                                الاسم</th>
-                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">
-                                نوع جهة العمل</th>
-                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">
-                                الاشتراك</th>
-                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">
-                                الرقم التجاري</th>
-                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">
-                                الحالة</th>
-                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">
-                                الإجراء</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($items as $row)
-                            <tr>
-                                <td>{{ $row->id }}</td>
-                                <td>{{ $row->name }}</td>
-                                <td>{{ optional($row->workCategory)->name }}</td>
-                                <td>{{ optional($row->subscription)->name ?: '—' }}</td>
-                                <td>{{ $row->commercial_number ?: '—' }}</td>
-                                <td>
-                                    @if ($row->status)
-                                        <span
-                                            style="display:inline-block;background:#e9fbf2;color:#10734a;
-                                                     border:1.5px solid #86efac;border-radius:999px;
-                                                     padding:6px 12px;font-weight:800;">نشطة</span>
-                                    @else
-                                        <span
-                                            style="display:inline-block;background:#eff2f6;color:#374151;
-                                                     border:1.5px solid #d1d5db;border-radius:999px;
-                                                     padding:6px 12px;font-weight:800;">موقوفة</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div style="display:flex;gap:.5rem;flex-wrap:nowrap;align-items:center;">
-                                        <a href="{{ route('institucions.show', $row) }}"
-                                            style="display:inline-flex;align-items:center;gap:6px;
-                                                   background:#faf3ef;border:1.5px solid #f5cbaa;color:#92400E;
-                                                   padding:6px 12px;border-radius:999px;font-weight:700;
-                                                   font-size:14px;text-decoration:none;">
-                                            <i class="fa fa-eye"></i> عرض
-                                        </a>
-                                        <a href="{{ route('institucions.edit', $row) }}"
-                                            style="display:inline-flex;align-items:center;gap:6px;
-                                                   background:#fff;border:1.5px solid #E5E7EB;color:#374151;
-                                                   padding:6px 12px;border-radius:999px;font-weight:700;
-                                                   font-size:14px;text-decoration:none;">
-                                            <i class="fa fa-edit"></i> تعديل
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+        {{-- رسائل الأخطاء --}}
+        @if ($errors->any())
+            <div
+                style="border:1.5px solid #fecaca;background:#fef2f2;padding:12px;border-radius:14px;margin-bottom:16px;box-shadow:0 10px 28px rgba(0,0,0,.08);color:#991b1b;">
+                <div style="font-weight:800;margin-bottom:6px;">تحقق من الحقول التالية:</div>
+                <ul style="margin:0;padding-inline-start:22px;">
+                    @foreach ($errors->all() as $e)
+                        <li>{{ $e }}</li>
+                    @endforeach
+                </ul>
             </div>
-        </div>
+        @endif
+
+        <form action="{{ route('institucions.store') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            <input type="hidden" name="excel_rows" id="excel_rows">
+
+            {{-- البطاقة 1: الأساسيات --}}
+            <div
+                style="border:1.5px solid #E5E7EB;border-radius:24px;box-shadow:0 18px 40px rgba(0,0,0,.12);margin-bottom:16px;overflow:hidden;background:#fff;">
+                <div
+                    style="background:linear-gradient(135deg,#d95b00 0%,#F58220 35%,#FF8F34 70%,#ffb066 100%);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px;font-weight:800;">
+                    <span
+                        style="background:#FF8F34;color:#fff;width:34px;height:34px;display:grid;place-items:center;border-radius:999px;font-size:.95rem;box-shadow:0 10px 22px rgba(245,130,32,.35);">1</span>
+                    <h6 style="margin:0;font-weight:800;color:#ffffff;">أساسيات جهة العمل</h6>
+                </div>
+
+                <div style="padding:22px 20px 26px;">
+                    <div class="row g-3">
+                        <div class="col-lg-5">
+                            <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
+                                نوع جهة العمل <span style="color:#ef4444;">*</span>
+                            </label>
+                            @php
+                                $isWakeel = auth()->user()->hasRole('Wakeel');
+                                $publicCategoryIds = isset($publicCategoryIds) ? $publicCategoryIds : [19];
+                            @endphp
+                            <select id="work_categories_id" name="work_categories_id" class="form-control"
+                                style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
+                                required>
+                                <option value="" disabled {{ old('work_categories_id') ? '' : 'selected' }}>— اختر
+                                    النوع —</option>
+                                @foreach ($workCategories as $wc)
+                                    @php
+                                        $isPublicForWakeel = $isWakeel && in_array($wc->id, $publicCategoryIds);
+                                        $requires = in_array($wc->id, $requiresDocsIds ?? []) ? 1 : 0;
+                                    @endphp
+                                    @continue($isPublicForWakeel)
+                                    <option value="{{ $wc->id }}" data-requires="{{ $requires }}"
+                                        {{ (string) old('work_categories_id') === (string) $wc->id ? 'selected' : '' }}>
+                                        {{ $wc->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <div style="color:#6b7280;font-size:13px;margin-top:6px;">ستظهر حقول السجل والملفات تلقائيًا إذا
+                                كان النوع يتطلبها.</div>
+                        </div>
+
+                        <div class="col-lg-7">
+                            <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
+                                اسم جهة العمل <span style="color:#ef4444;">*</span>
+                            </label>
+                            <input type="text" name="name" class="form-control"
+                                style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
+                                value="{{ old('name') }}" placeholder="أدخل اسم الجهة" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
+                                الاشتراك <span style="color:#ef4444;">*</span>
+                            </label>
+                            <select name="subscriptions_id" class="form-control"
+                                style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
+                                required>
+                                <option value="" disabled selected>— اختر الاشتراك —</option>
+                                @foreach ($subscriptions as $s)
+                                    <option value="{{ $s->id }}"
+                                        {{ old('subscriptions_id') == $s->id ? 'selected' : '' }}>
+                                        {{ $s->name ?? 'اشتراك #' . $s->id }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        @if ($showAgentSelect)
+                            <div class="col-md-6">
+                                <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
+                                    الوكيل التأميني (اختياري)
+                                </label>
+                                <select name="insurance_agent_id" class="form-control"
+                                    style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;">
+                                    <option value="">— اختياري —</option>
+                                    @foreach ($agents as $a)
+                                        <option value="{{ $a->id }}"
+                                            {{ (string) old('insurance_agent_id', (string) $preselectedAgentId) === (string) $a->id ? 'selected' : '' }}>
+                                            {{ $a->name ?? 'Agent #' . $a->id }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @else
+                            <input type="hidden" name="insurance_agent_id" value="{{ $preselectedAgentId }}">
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            {{-- البطاقة 2: بيانات السجل --}}
+            <div id="docs-card"
+                style="display:none;border:1.5px solid #E5E7EB;border-radius:24px;box-shadow:0 18px 40px rgba(0,0,0,.12);margin-bottom:16px;overflow:hidden;background:#fff;">
+                <div
+                    style="background:linear-gradient(135deg,#d95b00 0%,#F58220 35%,#FF8F34 70%,#ffb066 100%);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px;font-weight:800;">
+                    <span
+                        style="background:#FF8F34;color:#fff;width:34px;height:34px;display:grid;place-items:center;border-radius:999px;font-size:.95rem;box-shadow:0 10px 22px rgba(245,130,32,.35);">2</span>
+                    <h6 style="margin:0;font-weight:800;color:#ffffff">بيانات السجل التجاري والترخيص</h6>
+                </div>
+
+                <div style="padding:22px 20px 26px;">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">الرقم
+                                التجاري</label>
+                            <input type="text" name="commercial_number" class="form-control"
+                                style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
+                                value="{{ old('commercial_number') }}" placeholder="مثال: 123456789">
+                        </div>
+                        <div class="col-md-6">
+                            <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">ملف
+                                الترخيص</label>
+                            <input type="file" name="license_number" class="form-control"
+                                style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
+                                accept=".pdf,.jpg,.jpeg,.png">
+                        </div>
+                        <div class="col-md-6">
+                            <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">ملف
+                                السجل التجاري</label>
+                            <input type="file" name="commercial_record" class="form-control"
+                                style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
+                                accept=".pdf,.jpg,.jpeg,.png">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- البطاقة 3: استيراد الإكسل --}}
+            <div
+                style="border:1.5px solid #E5E7EB;border-radius:24px;box-shadow:0 18px 40px rgba(0,0,0,.12);margin-bottom:16px;overflow:hidden;background:#fff;">
+                <div
+                    style="background:linear-gradient(135deg,#d95b00 0%,#F58220 35%,#FF8F34 70%,#ffb066 100%);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px;font-weight:800;">
+                    <span
+                        style="background:#FF8F34;color:#fff;width:34px;height:34px;display:grid;place-items:center;border-radius:999px;font-size:.95rem;box-shadow:0 10px 22px rgba(245,130,32,.35);">3</span>
+                    <h6 style="margin:0;font-weight:800;color:#ffffff;">استيراد بيانات الموظفين / الحسابات</h6>
+                </div>
+
+                <div style="padding:22px 20px 26px;">
+                    <div class="mb-3">
+                        <label for="excel_sheet" class="form-label"
+                            style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
+                            شيت الإكسل (اختياري)
+                        </label>
+                        <input type="file" name="excel_sheet" id="excel_sheet" class="form-control"
+                            style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
+                            accept=".xlsx,.xls,.csv">
+
+                    </div>
+                </div>
+            </div>
+
+            {{-- الأزرار --}}
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button type="submit"
+                    onmouseover="this.style.filter='brightness(1.03)'; this.style.transform='translateY(-1px)';"
+                    onmouseout="this.style.filter='none'; this.style.transform='none';"
+                    style="all:unset;display:inline-flex;align-items:center;gap:8px;cursor:pointer;text-align:center;padding:13px 26px;border-radius:999px;font-weight:900;font-size:1rem;letter-spacing:.3px;
+                           background:#F58220;color:#fff;box-shadow:0 12px 26px rgba(245,130,32,.30);">
+                    حفظ الجهة
+                    <i class="fa-solid fa-circle-check"></i>
+                </button>
+
+                <a href="{{ route('institucions.index') }}"
+                    style="display:inline-flex;align-items:center;gap:8px;background:#fff;color:#111827;border:1.5px solid #D0D5DD;border-radius:999px;padding:13px 26px;font-weight:900;text-decoration:none;">
+                    إلغاء
+                    <i class="fa-solid fa-xmark"></i>
+                </a>
+            </div>
+        </form>
     </div>
 @endsection
 
-@section('js')
-    <style>
-        #institucionsTable {
-            font-size: 15px;
-        }
-
-        #institucionsTable thead th {
-            font-size: 16px;
-        }
-
-        /* ستايل الأزرار */
-        .btn-light-brown {
-            background: #faf3ef !important;
-            border: 1.5px solid #f5cbaa !important;
-            color: #92400E !important;
-            border-radius: 999px !important;
-            padding: 8px 16px !important;
-            font-weight: 900 !important;
-            margin: 2px !important;
-            display: inline-flex !important;
-            align-items: center;
-            gap: 6px;
-        }
-    </style>
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <script>
-        $(document).ready(function() {
-            $('#institucionsTable').DataTable({
-                language: {
-                    url: "../Arabic.json",
-                    search: "بحث:",
-                    info: "إظهار _START_ إلى _END_ من أصل _TOTAL_ جهة",
-                    infoEmpty: "لا توجد سجلات",
-                    lengthMenu: "إظهار _MENU_ سجلات لكل صفحة",
-                    paginate: {
-                        first: "الأول",
-                        last: "الأخير",
-                        next: "التالي",
-                        previous: "السابق"
+        (function() {
+            const select = document.getElementById('work_categories_id');
+            const docsCard = document.getElementById('docs-card');
+
+            function toggleDocs() {
+                const opt = select.options[select.selectedIndex];
+                const requires = opt ? opt.getAttribute('data-requires') === '1' : false;
+                docsCard.style.display = requires ? '' : 'none';
+            }
+            select.addEventListener('change', toggleDocs);
+            toggleDocs();
+
+            const form = document.querySelector('form[action="{{ route('institucions.store') }}"]');
+            const fileInput = document.getElementById('excel_sheet');
+            const hiddenCount = document.getElementById('excel_rows');
+            let confirmed = false;
+
+            form.addEventListener('submit', function(e) {
+                if (!fileInput || !fileInput.files || fileInput.files.length === 0 || confirmed) return true;
+
+                e.preventDefault();
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    try {
+                        const data = new Uint8Array(evt.target.result);
+                        const workbook = XLSX.read(data, {
+                            type: 'array'
+                        });
+                        const firstSheetName = workbook.SheetNames[0];
+                        const ws = workbook.Sheets[firstSheetName];
+                        const rows = XLSX.utils.sheet_to_json(ws, {
+                            header: 1,
+                            blankrows: false
+                        });
+                        const dataRows = rows.slice(1);
+                        const count = dataRows.filter(r => r.some(cell => String(cell ?? '').trim() !== ''))
+                            .length;
+
+                        if (hiddenCount) hiddenCount.value = count;
+
+                        Swal.fire({
+                            title: 'تأكيد الاستيراد',
+                            html: `تم العثور على <b>${count}</b> موظف في شيت الإكسل.<br>هل تريدين إكمال الحفظ؟`,
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonText: 'نعم، احفظ',
+                            cancelButtonText: 'إلغاء',
+                        }).then((res) => {
+                            if (res.isConfirmed) {
+                                confirmed = true;
+                                const btn = form.querySelector('button[type="submit"]');
+                                if (btn) {
+                                    btn.disabled = true;
+                                    btn.innerHTML =
+                                        '<i class="fa fa-spinner fa-spin"></i> جاري الحفظ...';
+                                }
+                                form.submit();
+                            }
+                        });
+                    } catch (err) {
+                        console.error(err);
+                        Swal.fire({
+                            title: 'تنبيه',
+                            text: 'تعذر قراءة شيت الإكسل في المتصفح. سيتم متابعة الحفظ بدون تأكيد العدد.',
+                            icon: 'warning',
+                            confirmButtonText: 'متابعة الحفظ'
+                        }).then(() => form.submit());
                     }
-                },
-                lengthMenu: [5, 10],
-                bLengthChange: true,
-                paging: true,
-                searching: true,
-                ordering: true,
-                dom: '<"top d-flex justify-content-between"lfB>rtip',
-                buttons: [{
-                        extend: 'copyHtml5',
-                        text: '<i class="fa fa-copy"></i> نسخ',
-                        className: 'btn-light-brown'
-                    },
-                    {
-                        extend: 'excelHtml5',
-                        text: '<i class="fa fa-file-excel"></i> Excel',
-                        className: 'btn-light-brown'
-                    },
-                    {
-                        extend: 'colvis',
-                        text: '<i class="fa fa-columns"></i> الأعمدة',
-                        className: 'btn-light-brown'
-                    }
-                ]
+                };
+
+                reader.onerror = function() {
+                    Swal.fire({
+                        title: 'خطأ في الملف',
+                        text: 'تعذر فتح ملف الإكسل. سيتم متابعة الحفظ بدون تأكيد العدد.',
+                        icon: 'warning',
+                        confirmButtonText: 'متابعة الحفظ'
+                    }).then(() => form.submit());
+                };
+
+                reader.readAsArrayBuffer(fileInput.files[0]);
             });
-        });
+        })();
     </script>
-@endsection
+@endpush

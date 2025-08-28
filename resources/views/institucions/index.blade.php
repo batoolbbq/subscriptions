@@ -15,14 +15,7 @@
             </div>
         @endif
 
-        {{-- العنوان --}}
-        <div class="mb-3">
-            <h3 style="color:#92400E;font-weight:700;margin:0; margin-bottom:14px;">
-                جهات العمل
-            </h3>
-        </div>
-
-        {{-- الفلاتر + زر إضافة --}}
+        {{-- العنوان + الفلاتر + زر إضافة --}}
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap" style="gap:10px;">
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
                 <a href="{{ route('institucions.index') }}"
@@ -67,13 +60,20 @@
                 <table id="institucionsTable" class="table table-bordered table-hover table-custom" style="margin:0;">
                     <thead>
                         <tr>
-                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">#</th>
-                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">الاسم</th>
-                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">نوع جهة العمل</th>
-                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">الاشتراك</th>
-                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">الرقم التجاري</th>
-                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">الحالة</th>
-                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">الإجراء</th>
+                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">#
+                            </th>
+                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">
+                                الاسم</th>
+                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">
+                                نوع جهة العمل</th>
+                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">
+                                الاشتراك</th>
+                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">
+                                الرقم التجاري</th>
+                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">
+                                الحالة</th>
+                            <th style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);font-weight:800;color:#4b5563;">
+                                الإجراء</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -86,11 +86,13 @@
                                 <td>{{ $row->commercial_number ?: '—' }}</td>
                                 <td>
                                     @if ($row->status)
-                                        <span style="display:inline-block;background:#e9fbf2;color:#10734a;
+                                        <span
+                                            style="display:inline-block;background:#e9fbf2;color:#10734a;
                                                      border:1.5px solid #86efac;border-radius:999px;
                                                      padding:6px 12px;font-weight:800;">نشطة</span>
                                     @else
-                                        <span style="display:inline-block;background:#eff2f6;color:#374151;
+                                        <span
+                                            style="display:inline-block;background:#eff2f6;color:#374151;
                                                      border:1.5px solid #d1d5db;border-radius:999px;
                                                      padding:6px 12px;font-weight:800;">موقوفة</span>
                                     @endif
@@ -106,7 +108,7 @@
                                         </a>
                                         <a href="{{ route('institucions.edit', $row) }}"
                                             style="display:inline-flex;align-items:center;gap:6px;
-                                                   background:#fff;border:1.5px solid #E5E7EB;color:#374151;
+                                                   background:#fff5e6;border:1.5px solid #F58220;color:#F58220;
                                                    padding:6px 12px;border-radius:999px;font-weight:700;
                                                    font-size:14px;text-decoration:none;">
                                             <i class="fa fa-edit"></i> تعديل
@@ -120,4 +122,78 @@
             </div>
         </div>
     </div>
+@endsection
+
+@section('js')
+    <style>
+        #institucionsTable {
+            font-size: 15px;
+        }
+
+        #institucionsTable thead th {
+            font-size: 16px;
+        }
+
+        .btn-light-brown {
+            background: #faf3ef !important;
+            border: 1.5px solid #f5cbaa !important;
+            color: #92400E !important;
+            border-radius: 999px !important;
+            padding: 8px 16px !important;
+            font-weight: 900 !important;
+            margin: 2px !important;
+            display: inline-flex !important;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dataTables_wrapper .dataTables_filter input {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 6px 10px;
+            margin-right: 6px;
+            font-size: 14px;
+        }
+    </style>
+
+    <script>
+        $(document).ready(function() {
+            $('#institucionsTable').DataTable({
+                language: {
+                    url: "../Arabic.json",
+                    search: "بحث:",
+                    info: "إظهار _START_ إلى _END_ من أصل _TOTAL_ جهة",
+                    infoEmpty: "لا توجد سجلات",
+                    lengthMenu: "إظهار _MENU_ سجلات لكل صفحة",
+                    paginate: {
+                        first: "الأول",
+                        last: "الأخير",
+                        next: "التالي",
+                        previous: "السابق"
+                    }
+                },
+                lengthMenu: [5, 10, 25, 50],
+                paging: true,
+                searching: true,
+                ordering: true,
+                dom: '<"top d-flex justify-content-between"lfB>rtip',
+                buttons: [{
+                        extend: 'copyHtml5',
+                        text: '<i class="fa fa-copy"></i> نسخ',
+                        className: 'btn-light-brown'
+                    },
+                    {
+                        extend: 'excelHtml5',
+                        text: '<i class="fa fa-file-excel"></i> Excel',
+                        className: 'btn-light-brown'
+                    },
+                    {
+                        extend: 'colvis',
+                        text: '<i class="fa fa-columns"></i> الأعمدة',
+                        className: 'btn-light-brown'
+                    }
+                ]
+            });
+        });
+    </script>
 @endsection
