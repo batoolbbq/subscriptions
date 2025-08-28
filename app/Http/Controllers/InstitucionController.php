@@ -173,6 +173,43 @@ public function store(Request $request)
     }
 
 
+    public function edit(Institucion $institucion)
+{
+    $user = Auth::user();
+
+    $workCategories  = WorkCategory::orderBy('name')->get();
+    $subscriptions   = Subscription::orderBy('id', 'desc')->get();
+    $agents          = collect(); // يظهر فقط للأدمن
+    $requiresDocsIds = [20, 21];
+
+    $showAgentSelect    = false; 
+    $preselectedAgentId = null;
+
+    if ($user->hasRole('admin')) {
+        $showAgentSelect    = true;
+        $agents             = InsuranceAgents::select('id','name')->orderBy('name')->get();
+        $preselectedAgentId = old('insurance_agent_id', $institucion->insurance_agent_id);
+    } elseif ($user->hasRole('Wakeel')) {
+        $preselectedAgentId = $user->insuranceAgents()->pluck('insurance_agents.id')->first();
+    } elseif ($user->hasRole('insurance-manager')) {
+        $preselectedAgentId = 94; 
+    } else {
+        abort(403, 'ليس لديك صلاحية لتعديل جهة عمل.');
+    }
+
+    return view('institucions.edit', compact(
+        'institucion',
+        'workCategories',
+        'subscriptions',
+        'agents',
+        'requiresDocsIds',
+        'showAgentSelect',
+        'preselectedAgentId'
+    ));
+}
+
+
+
     public function update(Request $request, Institucion $institucion)
     {
         $validated = $request->validate([

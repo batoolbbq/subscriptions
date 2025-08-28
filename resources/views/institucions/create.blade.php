@@ -16,7 +16,7 @@
 
 
             <a href="{{ route('institucions.index') }}"
-                style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#111827;border:1.5px solid #D0D5DD;border-radius:999px;padding:8px 14px;font-weight:800;text-decoration:none;box-shadow:0 8px 18px rgba(0,0,0,.06);">
+                style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#6b7280;border:1.5px solid #D0D5DD;border-radius:999px;padding:8px 14px;font-weight:800;text-decoration:none;box-shadow:0 8px 18px rgba(0,0,0,.06);">
                 <i class="fa fa-arrow-right"></i> رجوع للقائمة
             </a>
         </div>
@@ -200,11 +200,7 @@
                     <i class="fa-solid fa-circle-check"></i>
                 </button>
 
-                <a href="{{ route('institucions.index') }}"
-                    style="display:inline-flex;align-items:center;gap:8px;background:#fff;color:#111827;border:1.5px solid #D0D5DD;border-radius:999px;padding:13px 26px;font-weight:900;text-decoration:none;">
-                    إلغاء
-                    <i class="fa-solid fa-xmark"></i>
-                </a>
+            
             </div>
         </form>
     </div>
