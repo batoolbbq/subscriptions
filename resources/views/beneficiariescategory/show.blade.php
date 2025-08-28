@@ -2,81 +2,126 @@
 
 @section('title', 'تفاصيل الفئة')
 
+@section('css')
+    {{-- خط + أيقونات --}}
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+@endsection
+
 @section('content')
-<div class="container py-4" style="font-family: sans-serif;">
+    <div class="container py-4"
+        style="--brand:#F58220;--brand-600:#ff8f34;--brown:#8C5346;--ink:#1F2328;--muted:#6b7280;--line:#E5E7EB;
+            --hdr1:#d95b00;--hdr2:#F58220;--hdr3:#FF8F34;--hdr4:#ffb066;
+            --green-50:#e9fbf2;--green-700:#10734a;--gray-50:#eff2f6;--gray-700:#374151;
+            --red-50:#fff1f1;--red-200:#ffc9c9;--red-700:#b42318;
+            font-family:'Tajawal',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;">
 
-  {{-- العنوان + زر الرجوع --}}
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-    <div>
-      <h3 style="margin:0;font-weight:800;color:#111827;">تفاصيل الفئة</h3>
-      <div style="color:#6b7280;font-size:14px;">عرض بيانات الفئة والمعلومات المرتبطة.</div>
+        {{-- العنوان + زر الرجوع --}}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div>
+                <h3 style="margin:0;font-weight:800;color:var(--brown);letter-spacing:.2px;">تفاصيل الفئة</h3>
+                {{-- <div style="color:var(--muted);font-size:14px;">عرض بيانات الفئة والمعلومات المرتبطة</div> --}}
+            </div>
+            <a href="{{ route('beneficiariescategory.index') }}"
+                style="all:unset;display:inline-flex;align-items:center;gap:8px;cursor:pointer;
+              background:#fff;color:var(--ink);border:1.5px solid var(--line);
+              border-radius:999px;padding:10px 16px;font-weight:900;text-decoration:none;
+              box-shadow:0 8px 18px rgba(0,0,0,.06);">
+                <i class="fa-solid fa-arrow-right"></i> رجوع للقائمة
+            </a>
+        </div>
+
+        {{-- بطاقة بيانات الفئة --}}
+        <div
+            style="background:#fff;border:1.5px solid var(--line);border-radius:24px;
+              box-shadow:0 18px 40px rgba(0,0,0,.12);overflow:hidden;">
+
+            {{-- الترويسة --}}
+            <div
+                style="background:linear-gradient(135deg,var(--hdr1) 0%,var(--hdr2) 35%,var(--hdr3) 70%,var(--hdr4) 100%);
+                color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px;font-weight:800;">
+                <span
+                    style="background:var(--hdr3);color:#fff;min-width:34px;height:34px;
+                   display:grid;place-items:center;border-radius:999px;font-size:.95rem;
+                   box-shadow:0 10px 22px rgba(245,130,32,.35);">
+                    <i class="fa-solid fa-layer-group"></i>
+                </span>
+                <h6 style="margin:0;font-weight:800;color:#fff;">بيانات الفئة</h6>
+            </div>
+
+            {{-- المحتوى --}}
+            <div
+                style="padding:22px 20px 26px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;">
+                <div>
+                    <label
+                        style="color:var(--muted);font-size:.95rem;font-weight:700;display:block;margin-bottom:6px;">الاسم</label>
+                    <div style="font-weight:800;color:var(--ink);">{{ $item->name }}</div>
+                </div>
+
+                <div>
+                    <label
+                        style="color:var(--muted);font-size:.95rem;font-weight:700;display:block;margin-bottom:6px;">الكود</label>
+                    <div style="font-weight:800;color:var(--ink);">{{ $item->code }}</div>
+                </div>
+
+                <div>
+                    <label
+                        style="color:var(--muted);font-size:.95rem;font-weight:700;display:block;margin-bottom:6px;">الحالة</label>
+                    @if ($item->status)
+                        <span
+                            style="display:inline-flex;align-items:center;gap:6px;
+                       background:var(--green-50);color:var(--green-700);
+                       border:1.5px solid #86efac;border-radius:999px;
+                       padding:6px 14px;font-weight:800;">
+                            <i class="fa-solid fa-circle-check"></i> مفعّلة
+                        </span>
+                    @else
+                        <span
+                            style="display:inline-flex;align-items:center;gap:6px;
+                       background:var(--gray-50);color:var(--gray-700);
+                       border:1.5px solid #d1d5db;border-radius:999px;
+                       padding:6px 14px;font-weight:800;">
+                            <i class="fa-solid fa-circle-xmark"></i> موقوفة
+                        </span>
+                    @endif
+                </div>
+
+                <div>
+                    <label
+                        style="color:var(--muted);font-size:.95rem;font-weight:700;display:block;margin-bottom:6px;">تاريخ
+                        الإنشاء</label>
+                    <div style="font-weight:800;color:var(--ink);">{{ $item->created_at?->format('Y-m-d H:i') }}</div>
+                </div>
+
+                <div>
+                    <label style="color:var(--muted);font-size:.95rem;font-weight:700;display:block;margin-bottom:6px;">آخر
+                        تحديث</label>
+                    <div style="font-weight:800;color:var(--ink);">{{ $item->updated_at?->format('Y-m-d H:i') }}</div>
+                </div>
+            </div>
+
+            {{-- الأزرار --}}
+            <div style="padding:16px;border-top:1.5px solid var(--line);display:flex;gap:8px;flex-wrap:wrap;">
+                <a href="{{ route('beneficiariescategory.edit', $item->id) }}"
+                    style="all:unset;display:inline-flex;align-items:center;gap:8px;cursor:pointer;
+                background:#FFF5E6;color:#92400E;border:1.5px solid #FFD8A8;
+                border-radius:999px;padding:10px 18px;font-weight:900;text-decoration:none;">
+                    <i class="fa-solid fa-pen-to-square"></i> تعديل
+                </a>
+
+                <form action="{{ route('beneficiariescategory.destroy', $item->id) }}" method="POST"
+                    onsubmit="return confirm('تأكيد الحذف؟');" style="margin:0;">
+                    @csrf @method('DELETE')
+                    <button type="submit"
+                        style="all:unset;display:inline-flex;align-items:center;gap:8px;cursor:pointer;
+                       background:var(--red-50);color:var(--red-700);border:1.5px solid var(--red-200);
+                       border-radius:999px;padding:10px 18px;font-weight:900;">
+                        <i class="fa-solid fa-trash"></i> حذف
+                    </button>
+                </form>
+
+              
+            </div>
+        </div>
     </div>
-    <a href="{{ route('beneficiariescategory.index') }}" 
-       style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#111827;border:1.5px solid #D0D5DD;border-radius:999px;padding:6px 14px;font-weight:700;text-decoration:none;">
-      <i class="fa fa-arrow-right"></i> رجوع للقائمة
-    </a>
-  </div>
-
-  <div style="border:1.5px solid #D0D5DD;border-radius:14px;box-shadow:0 8px 20px rgba(17,24,39,.04);margin-bottom:16px;overflow:hidden;">
-    <div style="background:linear-gradient(180deg,#FFF7EE,#FCE8D6);border-bottom:1.5px solid #D0D5DD;padding:10px 14px;display:flex;align-items:center;gap:8px;">
-      <span style="min-width:28px;height:28px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;background:#FFF7EE;border:1.5px solid #FFD8A8;color:#92400E;font-weight:800;">i</span>
-      <h6 style="margin:0;font-weight:800;color:#374151;">بيانات الفئة</h6>
-    </div>
-
-    <div style="padding:16px;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div>
-          <div style="color:#6b7280;font-size:13px;margin-bottom:4px;">الاسم</div>
-          <div style="font-weight:700;color:#111827;">{{ $item->name }}</div>
-        </div>
-
-        <div>
-          <div style="color:#6b7280;font-size:13px;margin-bottom:4px;">الكود</div>
-          <div style="font-weight:700;color:#111827;">{{ $item->code }}</div>
-        </div>
-
-        <div>
-          <div style="color:#6b7280;font-size:13px;margin-bottom:4px;">الحالة</div>
-          <div>
-            @if($item->status)
-              <span style="display:inline-block;background:#e9fbf2;color:#10734a;border:1.5px solid #a7f3d0;border-radius:6px;padding:4px 12px;font-weight:800;">مفعّلة</span>
-            @else
-              <span style="display:inline-block;background:#eff2f6;color:#374151;border:1.5px solid #d1d5db;border-radius:6px;padding:4px 12px;font-weight:800;">موقوفة</span>
-            @endif
-          </div>
-        </div>
-
-        <div>
-          <div style="color:#6b7280;font-size:13px;margin-bottom:4px;">تاريخ الإنشاء</div>
-          <div style="font-weight:700;color:#111827;">{{ $item->created_at?->format('Y-m-d H:i') }}</div>
-        </div>
-
-        <div>
-          <div style="color:#6b7280;font-size:13px;margin-bottom:4px;">آخر تحديث</div>
-          <div style="font-weight:700;color:#111827;">{{ $item->updated_at?->format('Y-m-d H:i') }}</div>
-        </div>
-      </div>
-
-      {{-- الأزرار --}}
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">
-        <a href="{{ route('beneficiariescategory.edit', $item->id) }}"
-           style="display:inline-flex;align-items:center;gap:6px;background:#fff5e6;color:#92400E;border:1.5px solid #FFD8A8;border-radius:999px;padding:8px 18px;font-weight:800;text-decoration:none;cursor:pointer;">
-          <i class="fa fa-edit"></i> تعديل
-        </a>
-        <form action="{{ route('beneficiariescategory.destroy', $item->id) }}" method="POST" onsubmit="return confirm('تأكيد الحذف؟');" style="margin:0;">
-          @csrf @method('DELETE')
-          <button type="submit"
-                  style="display:inline-flex;align-items:center;gap:6px;background:#FFF1F1;color:#B42318;border:1.5px solid #FFC9C9;border-radius:999px;padding:8px 18px;font-weight:800;cursor:pointer;">
-            <i class="fa fa-trash"></i> حذف
-          </button>
-        </form>
-        <a href="{{ route('beneficiariescategory.index') }}"
-           style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#111827;border:1.5px solid #D0D5DD;border-radius:999px;padding:8px 18px;font-weight:800;text-decoration:none;">
-          <i class="fa fa-arrow-right"></i> رجوع
-        </a>
-      </div>
-    </div>
-  </div>
-
-</div>
 @endsection

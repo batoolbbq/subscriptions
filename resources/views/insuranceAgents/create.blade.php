@@ -455,7 +455,7 @@
                     <div class="form-group" style="margin-top:14px;">
                         <label for="description">وصف لحجم ومساحة المكان</label>
                         <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description"
-                            rows="4" placeholder="مثال: مكتب بمساحة 40م²، به قاعة استقبال وغرفة أرشيف..." required>{{ old('description') }}</textarea>
+                            rows="4" placeholder="مثال: مكتب بمساحة 40م²،     ..." required>{{ old('description') }}</textarea>
                         @error('description')
                             <div class="error-text">{{ $message }}</div>
                         @enderror
@@ -479,9 +479,9 @@
                                         </label>
                                     </div>
                                     <input class="@error('Birth_creature') is-invalid @enderror" type="file"
-                                        id="Birth_creature" name="Birth_creature" accept=".jpg,.jpeg,.png" required>
+                                        id="Birth_creature" name="Birth_creature"  required>
                                     <div class="file-name" data-file="Birth_creature"></div>
-                                    <div class="file-hint">الامتدادات المسموحة: JPG, JPEG, PNG</div>
+                                    <div class="file-hint"></div>
                                     @error('Birth_creature')
                                         <div class="error-text">{{ $message }}</div>
                                     @enderror
@@ -496,9 +496,9 @@
                                         </label>
                                     </div>
                                     <input class="@error('qualification') is-invalid @enderror" type="file"
-                                        id="qualification" name="qualification" accept=".jpg,.jpeg,.png" required>
+                                        id="qualification" name="qualification"  required>
                                     <div class="file-name" data-file="qualification"></div>
-                                    <div class="file-hint">الامتدادات المسموحة: JPG, JPEG, PNG</div>
+                                    <div class="file-hint"></div>
                                     @error('qualification')
                                         <div class="error-text">{{ $message }}</div>
                                     @enderror
@@ -522,7 +522,7 @@
                                 </div>
 
                                 <!-- شهادة التأمين -->
-                                <div class="form-group">
+                                {{-- <div class="form-group">
                                     <label>شهادة التأمين</label>
                                     <div class="file-actions">
                                         <label for="Insurance_certificate" class="file-label">
@@ -537,7 +537,7 @@
                                     @error('Insurance_certificate')
                                         <div class="error-text">{{ $message }}</div>
                                     @enderror
-                                </div>
+                                </div> --}}
 
                             </div>
                         </div>

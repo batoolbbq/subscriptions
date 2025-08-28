@@ -2,7 +2,7 @@
 
 @font-face {
     font-family: 'Readx';
-    src: url('../fonts/Cairo-Medium.ttf');
+    src: url('../fonts/Tajawal-Bold.ttf');
 }
 
 :root {
@@ -30481,15 +30481,44 @@ textarea.form-control {
 }
 
 .pagination .page-item .page-link {
-    padding: 1.0rem 1.3rem;
-    color: #626262;
+    padding: 0.7rem 1rem;
+    color: #4b5563;              /* نفس لون النص */
+    border: 1px solid #f5cbaa;   /* نفس حدود الجدول */
+    background: #fff;            /* أبيض */
+    border-radius: 0;            /* نشيل الزوايا */
+    margin: 0;   
+    font-weight: 600;
 }
 
-.pagination .page-item.active .page-link {
-    background: #007a98;
-    border-color: #007a98;
-    color: #ffffff;
+/* أول زر يكون له زوايا يمين */
+.pagination .page-item:first-child .page-link {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
 }
+
+/* آخر زر يكون له زوايا يسار */
+.pagination .page-item:last-child .page-link {
+    border-top-left-radius: 6px;
+        margin-left:12px;                /* نخليهم لاصقين */
+    border-bottom-left-radius: 6px;
+}
+
+/* الزر النشط */
+.pagination .page-item.active .page-link {
+    background: #F58220;            /* أبيض مثل الجدول */
+    border-color: #F58220;       /* برتقالي للتمييز */
+    color: #fff;              /* النص الغامق */
+    font-weight: 700;
+}
+
+/* الهوفر */
+.pagination .page-item .page-link:hover {
+    background: #FFF7EE;         /* فاتح زي الهيدر */
+    border-color: #F58220;
+    color: #92400E;
+}
+
+
 
 /* style-customizer */
 div.style-customizer {

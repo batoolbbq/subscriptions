@@ -8,7 +8,7 @@ use App\Models\insuranceAgents;
 use App\Models\City;
 use App\Models\User;
 use App\Models\Municipal;
-
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -144,48 +144,48 @@ public function deactivate($id)
         $agent->save();
 
         // استدعاء API الإرسال هنا
-        // $this->postInsuranceAgent($agent->id);
+        $this->postInsuranceAgent($agent->id);
 
         return redirect()->back()->with('success', 'تم تفعيل وكيل التأمين، وإنشاء المستخدم، وإرسال البيانات إلى الـ API.');
     }
 
-//   public function postInsuranceAgent($id)
-//     {
-//         $agent  = InsuranceAgents::findOrFail($id);
+  public function postInsuranceAgent($id)
+    {
+        $agent  = InsuranceAgents::findOrFail($id);
 
-//         $data = [
-//             "codeId" => (string) $agent->id, // تحويل إلى نص
-//             "name" => $agent->name,
-//             "email" => $agent->email,
-//             "phone" => $agent->phone_number,
-//             "address" => $agent->address,
-//             "municipalityId" =>1,
-//             "description" => $agent->description,
-//         ];
+        $data = [
+            "codeId" => (string) $agent->id, // تحويل إلى نص
+            "name" => $agent->name,
+            "email" => $agent->email,
+            "phone" => $agent->phone_number,
+            "address" => $agent->address,
+            "municipalityId" =>1,
+            "description" => $agent->description,
+        ];
 
-//         $response = Http::withBasicAuth('admin', 'admin')
-//             ->withHeaders([
-//                 'accept' => '*/*',
-//                 'Content-Type' => 'application/json'
-//             ])
-//             ->post('http://192.168.81.17:6060/admin/InsuranceAgents', $data);
+        $response = Http::withBasicAuth('admin', 'admin')
+            ->withHeaders([
+                'accept' => '*/*',
+                'Content-Type' => 'application/json'
+            ])
+            ->post('http://192.168.81.17:6060/admin/InsuranceAgents', $data);
 
-//         if ($response->successful()) {
-//             // الطلب نجح
-//             return [
-//                 'success' => true,
-//                 'status' => $response->status(),
-//                 'data' => $response->json(),
-//             ];
-//         } else {
-//             // الطلب فشل
-//             return [
-//                 'success' => false,
-//                 'status' => $response->status(),
-//                 'error' => $response->body(), // ممكن تكون رسالة خطأ
-//             ];
-//         }
-//     }
+        if ($response->successful()) {
+            // الطلب نجح
+            return [
+                'success' => true,
+                'status' => $response->status(),
+                'data' => $response->json(),
+            ];
+        } else {
+            // الطلب فشل
+            return [
+                'success' => false,
+                'status' => $response->status(),
+                'error' => $response->body(), // ممكن تكون رسالة خطأ
+            ];
+        }
+    }
 
 
 
@@ -235,15 +235,53 @@ public function deactivate($id)
         $agent->cities_id = $validatedData['cities_id'];
         $agent->municipals_id = $validatedData['municipals_id'];
         $agent->description = $validatedData['description'];
-        $agent->birth_certificate_path = $request->Birth_creature->store('public/insurancagents_files');
-        $agent->qualification_path = $request->qualification->store('public/insurancagents_files');
-        $agent->location_image_path = $request->image->store('public/insurancagents_files');
-        $agent->Insurance_certificate = $request->Insurance_certificate->store('public/insurancagents_files');
+       
+        if ($request->hasFile('Birth_creature')) {
+            $file      = $request->file('Birth_creature');
+            $ext       = $file->getClientOriginalExtension();
+            $fileName  = 'birth_certificate_' . Str::uuid() . '.' . $ext;
+
+            // يحفظ في public/insurancagents_files
+            $file->move(public_path('insurancagents_files'), $fileName);
+
+            $agent->birth_certificate_path = $fileName; // نخزّن الاسم بس
+        }
+
+        if ($request->hasFile('qualification')) {
+            $file      = $request->file('qualification');
+            $ext       = $file->getClientOriginalExtension();
+            $fileName  = 'qualification_' . Str::uuid() . '.' . $ext;
+
+            $file->move(public_path('insurancagents_files'), $fileName);
+
+            $agent->qualification_path = $fileName;
+        }
+
+        if ($request->hasFile('image')) {
+            $file      = $request->file('image');
+            $ext       = $file->getClientOriginalExtension();
+            $fileName  = 'location_image_' . Str::uuid() . '.' . $ext;
+
+            $file->move(public_path('insurancagents_files'), $fileName);
+
+            $agent->location_image_path = $fileName;
+        }
+
+        // مثال لو تبي شهادة التأمين
+        // if ($request->hasFile('Insurance_certificate')) {
+        //     $file      = $request->file('Insurance_certificate');
+        //     $ext       = $file->getClientOriginalExtension();
+        //     $fileName  = 'insurance_certificate_' . Str::uuid() . '.' . $ext;
+        //
+        //     $file->move(public_path('insurancagents_files'), $fileName);
+        //
+        //     $agent->Insurance_certificate = $fileName;
+        // }
 
         $agent->save();
 
         // إعادة التوجيه مع رسالة نجاح
-        return redirect()->back()->with('success', 'تم تسجيل الوكيل بنجاح!');
+        return redirect()->back()->with('success', 'تم تسجيلك كوكيل بنجاح!');
     }
 
 

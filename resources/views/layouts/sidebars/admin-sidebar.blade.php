@@ -71,6 +71,10 @@
                                     class="right-nav-text">{{ __(' جهات العمل ') }}</span> </a>
                         </li>
                     @endcan
+                     <li>
+                            <a href="{{ route('register-customerr') }}"><i class="fa fa-users"></i><span
+                                    class="right-nav-text">{{ __('  تسجيل مشترك ') }}</span> </a>
+                        </li>
 
                     <!-- الاقسام -->
 
@@ -174,7 +178,7 @@
                 <style>
                     /* تمييز العنصر النشط */
                     .side-menu li.active-menu>a {
-                        background-color: #ff9800;
+                        background-color: #ffb066;
                         color: #fff !important;
                         border-radius: 8px;
                     }
@@ -205,7 +209,7 @@
 
                     /* العنصر النشط */
                     .side-menu li.active-menu>a {
-                        background-color: #ff9800;
+                        background-color: #F58220;
                         color: #fff !important;
                     }
 

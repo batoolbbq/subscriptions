@@ -30,11 +30,10 @@ Route::get('/', function () {
 
     Route::get('/RegisterView', [App\Http\Controllers\CustomerController::class, 'registerCustomerByAdmin2'])->name('register-customerr');
 
-    Route::get('/CheckCustomer', [App\Http\Controllers\CustomerController::class, 'checkCustomersIdentity'])->name('check-customer');
+    Route::get('/CheckCustomer', [App\Http\Controllers\CustomerController::class, 'checksheet'])->name('check-customer');
     // Route::post('/StoreCustomer', [App\Http\Controllers\CustomerController::class, 'saveCustomersByAdmin'])->name('store-customer');
-    Route::get('/sendotp/{phone}', [App\Http\Controllers\CustomerController::class, 'sendotp'])->name('send-otp');
 
-
+Route::get('/sendotp/{phone}', [App\Http\Controllers\CustomerController::class, 'OTP'])->name('send-otp');
 Route::get('/insurance-agents/create', [InsuranceAgentsController::class, 'create'])
     ->name('insuranceAgents.create');
 

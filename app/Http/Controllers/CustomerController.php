@@ -19,6 +19,11 @@ use App\Models\beneficiariesSupCategories;
 use App\Models\InsuranceAgents;
 use App\Models\WorkCategory;
 use App\Models\Institucion;
+use App\Models\InstitucionSheetRow;
+use App\Models\Socialstatus;
+use App\Models\Warrantyoffice;
+
+
 
 
 use App\Services\CustomerretiredService;
@@ -30,6 +35,8 @@ use Illuminate\Support\Facades\DB;
 use RealRashid\SweetAlert\Facades\Alert;
 use Session;
 use App\Services\SmsApiServiceMadar;
+use Illuminate\Support\Facades\Http;
+
 
 class CustomerController extends Controller
 {
@@ -100,6 +107,63 @@ class CustomerController extends Controller
         return view('frontend.RegisterBeneficiary.index', ['beneficiariesSupCategories' => $beneficiariesSupCategories]);
 
     }
+
+
+
+    public function OTP($phone)
+    {
+        // تحقق هل فيه عميل بنفس الرقم
+        $customer = Customer::where('phone', $phone)->first();
+
+        // if (!$customer) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'المشترك غير موجود'
+        //     ], 404);
+        // }
+
+        // استدعاء API الخاصة بالـ OTP
+        $response = Http::withOptions(['verify' => false])
+            ->get('https://test.phif.gov.ly/api/otp-verification');
+
+        if ($response->failed()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'فشل الاتصال بخدمة OTP'
+            ], 500);
+        }
+
+        $otp = $response->json()['otp'] ?? null;
+
+        if (!$otp) {
+            return response()->json([
+                'success' => false,
+                'message' => 'الـ API لم ترجع كود OTP'
+            ], 500);
+        }
+
+        // إرسال SMS للمشترك
+        $vendor = substr($phone, 1, 1);
+
+        if ($vendor != "1" && $vendor != "3") {
+            $states = $this->sms2->sendSms((string) $phone, "رمز التحقق: " . $otp)->successful();
+        } else {
+            $states = $this->sms->sendSms((string) $phone, "رمز التحقق: " . $otp)->successful();
+        }
+
+        if (!$states) {
+            return response()->json([
+                'success' => false,
+                'message' => 'فشل إرسال الرسالة'
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم إرسال رمز التحقق',
+            'otp' => $otp // مؤقتاً للتيست
+        ]);
+    }
     // create customer by admin
     public function checkCustomersIdentity2(Request $request)
     {
@@ -118,7 +182,7 @@ class CustomerController extends Controller
         ], $messages);
 
 
-        $customer = Customer::where('phone',915040043)->first();
+        $customer = Customer::where('phone', $request->phone)->first();
 
         if ($customer != null) {
             //dd($customer);
@@ -266,39 +330,39 @@ class CustomerController extends Controller
         Alert::success('تمت عملية التحقق بنجاح');
 
         // NID (اختياري – نفس منطقك)
-        $nidAr = $this->nid ? $this->nid->getNidData($request->nationalID) : null;
-        $nidEn = $this->nid ? $this->nid->getNidEnData($request->nationalID) : null;
-        if ($this->nid && $nidAr == "Nid Not Found!") {
-            Alert::error('هذا الرقم غير موجود الرجاء التأكد');
-            return redirect()->back()->withInput();
-        }
-        if ($this->nid && $nidAr && !$nidAr->isLife) {
-            Alert::error('لايمكنك الاستفادة من الخدمة ');
-            return redirect()->back()->withInput();
-        }
+        // $nidAr = $this->nid ? $this->nid->getNidData($request->nationalID) : null;
+        // $nidEn = $this->nid ? $this->nid->getNidEnData($request->nationalID) : null;
+        // if ($this->nid && $nidAr == "Nid Not Found!") {
+        //     Alert::error('هذا الرقم غير موجود الرجاء التأكد');
+        //     return redirect()->back()->withInput();
+        // }
+        // if ($this->nid && $nidAr && !$nidAr->isLife) {
+        //     Alert::error('لايمكنك الاستفادة من الخدمة ');
+        //     return redirect()->back()->withInput();
+        // }
 
-        $fullNameArabic = $fullNameEnglish = $birtdate = $gendertype = null;
-        if ($this->nid && $nidAr) {
-            $fullNameArabic  = $nidAr->firstName.' '.$nidAr->fatherName.' '.$nidAr->grandFatherName.' '.$nidAr->surName;
-            $fullNameEnglish = $nidEn ? ($nidEn->FirstNameEn.' '.$nidEn->FatherNameEn.' '.$nidEn->GrandFatherNameEn.' '.$nidEn->SurNameEn) : null;
-            $parts = explode('T00', $nidAr->birthDate); $birtdate = $parts[0] ?? null;
-            $gendertype = substr($nidAr->nationalID, 0, 1);
-        }
+        // $fullNameArabic = $fullNameEnglish = $birtdate = $gendertype = null;
+        // if ($this->nid && $nidAr) {
+        //     $fullNameArabic  = $nidAr->firstName.' '.$nidAr->fatherName.' '.$nidAr->grandFatherName.' '.$nidAr->surName;
+        //     $fullNameEnglish = $nidEn ? ($nidEn->FirstNameEn.' '.$nidEn->FatherNameEn.' '.$nidEn->GrandFatherNameEn.' '.$nidEn->SurNameEn) : null;
+        //     $parts = explode('T00', $nidAr->birthDate); $birtdate = $parts[0] ?? null;
+        //     $gendertype = substr($nidAr->nationalID, 0, 1);
+        // }
 
         // منطقك القديم للفئات 2 و 3 (اختياري)
-        $Customer = null; $warrantynumber = null;
-        if ((int)$request->beneficiariesSupCategories === 2 && $this->nid && $nidAr) {
-            if ($nidAr->nationalID[0] != 2) { Alert::error(' نأسف لايمكنك الاستفادة من الخدمة '); return back()->withInput(); }
-            $Customer = Customer::where('registrationnumbers',$nidAr->quidNumber)->where('gender',1)->first();
-            if (!$Customer) { Alert::error(' المشترك الرئيسي غير مسجل '); return back()->withInput(); }
-        }
-        if ((int)$request->beneficiariesSupCategories === 3 && $this->nid && $nidAr) {
-            if ($nidAr->nationalID[0] != 2) { Alert::error(' نأسف لايمكنك الاستفادة من الخدمة '); return back()->withInput(); }
-            $warrantynumber = dead_retirees::where('registrationnumbers',$nidAr->quidNumber)->first();
-        }
+        // $Customer = null; $warrantynumber = null;
+        // if ((int)$request->beneficiariesSupCategories === 2 && $this->nid && $nidAr) {
+        //     if ($nidAr->nationalID[0] != 2) { Alert::error(' نأسف لايمكنك الاستفادة من الخدمة '); return back()->withInput(); }
+        //     $Customer = Customer::where('registrationnumbers',$nidAr->quidNumber)->where('gender',1)->first();
+        //     if (!$Customer) { Alert::error(' المشترك الرئيسي غير مسجل '); return back()->withInput(); }
+        // }
+        // if ((int)$request->beneficiariesSupCategories === 3 && $this->nid && $nidAr) {
+        //     if ($nidAr->nationalID[0] != 2) { Alert::error(' نأسف لايمكنك الاستفادة من الخدمة '); return back()->withInput(); }
+        //     $warrantynumber = dead_retirees::where('registrationnumbers',$nidAr->quidNumber)->first();
+        // }
 
         // ✅ الشيك من الشيت: فقط لو الفئة تتبع جهة عمل (مثال 7 أو 8)
-        $insured_no = $pension_no = $account_no = $total_pension = null;
+        // $insured_no = $pension_no = $account_no = $total_pension = null;
         $needsInstitution = in_array((string)$request->beneficiariesSupCategories, ['7','8'], true);
 
         if ($needsInstitution) {
@@ -357,6 +421,78 @@ class CustomerController extends Controller
             ->with('account_no',$account_no)
             ->with('total_pension',$total_pension);
     }
+
+
+
+    public function checksheet(Request $request)
+    {
+        $messages = [
+            'phone.required'                  => "الرجاء ادخال رقم الهاتف",
+            'phone.starts_with'               => "رقم الهاتف يجب أن يبدأ بـ 91 أو 92 أو 93 أو 94 أو 21",
+            'nationalID.required'             => "الرجاء ادخال رقم الوطني",
+            // 'otp.required'                    => "الرجاء ادخال الرمز ",
+            'beneficiariesSupCategories.*'    => 'يرجى اختيار الفئة',
+            'work_category_id.required_if'    => 'يرجى اختيار نوع جهة العمل للفئات 7 أو 8',
+            'institution_id.required_if'      => 'يرجى اختيار جهة العمل للفئات 7 أو 8',
+        ];
+
+        $data = $request->validate([
+            'phone'                      => 'required|digits:9|numeric|starts_with:91,92,94,21,93',
+            'nationalID'                 => ['required','digits:12','starts_with:2,1'],
+            // 'otp'                        => 'required|digits:6',
+            'beneficiariesSupCategories' => ['required'],
+            'work_category_id'           => 'required_if:beneficiariesSupCategories,7,8|nullable',
+            'institution_id'             => 'required_if:beneficiariesSupCategories,7,8|nullable',
+        ], $messages);
+
+        if (Customer::where('phone', $data['phone'])->exists()) {
+            return back()->withErrors(['phone' => 'رقم الهاتف مسجل مسبقاً'])->withInput();
+        }
+
+        // ==============================
+        //  OTP — كووولـــه موقوف/معلّق
+        // ==============================
+        // $ve = Verification::where('phone', $data['phone'])->first();
+        // if (!$ve) {
+        //     return back()->withErrors(['phone' => 'لم يتم إرسال رمز تحقق لهذا الرقم'])->withInput();
+        // }
+        // $expiresAt = \Carbon\Carbon::parse($ve->otp_time)->addMinutes(10);
+        // if (now()->gte($expiresAt)) {
+        //     return back()->withErrors(['otp' => 'لقد انتهت صلاحية رمز التحقق'])->withInput();
+        // }
+        // if ((string)$ve->otp !== (string)$data['otp']) {
+        //     return back()->withErrors(['otp' => 'رمز التحقق غير صحيح الرجاء التأكد'])->withInput();
+        // }
+
+        // الشــيــت فقط
+        $sheetMatch = null;
+        $needsInstitution = in_array((string)$data['beneficiariesSupCategories'], ['7','8'], true);
+
+        if ($needsInstitution) {
+            $sheetMatch = InstitucionSheetRow::where('national_id', $data['nationalID'])
+                ->where('institucion_id', $data['institution_id'])
+                ->first();
+
+            if (!$sheetMatch) {
+                return back()
+                    ->withErrors(['institution_id' => 'لم يتم العثور على بيانات مطابقة في الشيت (الرقم الوطني + جهة العمل)'])
+                    ->withInput();
+            }
+        }
+
+        // رجوع بنفس الصفحة بالقيم
+       return back()->with([
+            'verified_ok'   => true,
+            'sheetMatch'    => $sheetMatch,
+            'insured_no'    => $sheetMatch?->insured_no,
+            'pension_no'    => $sheetMatch?->pension_no,
+            'account_no'    => $sheetMatch?->account_no,
+            'total_pension' => $sheetMatch?->total_pension,
+        ])->withInput();
+
+    }
+
+
 
 
 

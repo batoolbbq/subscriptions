@@ -52,7 +52,7 @@
 
         .wrap {
             width: 100%;
-            max-width: 820px;
+            max-width: 500px;
             margin-inline: auto
         }
 
@@ -247,6 +247,49 @@
             }
         }
     </style>
+
+    <!-- jQuery (لو مش مضاف) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Select2 -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.full.min.js"></script>
+
+    <!-- دعم RTL لSelect2 -->
+    <style>
+        /* خليه يركب كويس مع مدخلاتك الدائرية */
+        .select2-container--default .select2-selection--single {
+            height: var(--control-h);
+            border: 1px solid #d7dbe0;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+        }
+
+        .select2-container--default .select2-selection__rendered {
+            line-height: var(--control-h);
+            padding-inline: 14px;
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        .select2-container--default .select2-selection__arrow {
+            height: var(--control-h);
+        }
+
+        /* فوكس */
+        .select2-container--default.select2-container--open .select2-selection--single,
+        .select2-container--default .select2-selection--single:focus {
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, .18);
+            outline: none;
+        }
+
+        /* خلي العرض 100% */
+        .select2-container {
+            width: 100% !important;
+        }
+    </style>
+
 </head>
 
 <body>
@@ -264,7 +307,8 @@
                 </div>
 
                 <div class="card-body">
-                    <form action="{{ route('check-customer') }}" method="POST" id="signUp-form">
+                    <form action="{{ route('check-customer') }}" method="GET" id="signUp-form" method="GET">
+
                         @csrf
 
                         {{-- الرقم الوطني --}}
@@ -306,11 +350,10 @@
                             <label for="otp">رمز التحقق</label>
                             <div class="input-icon">
                                 <i class="fa fa-lock"></i>
-                                <input type="text" required title="رمز التحقق متكون من سته أرقام" pattern="[0-9]{6}"
-                                    minlength="6" maxlength="6" name="otp"
-                                    onkeypress="return onlyNumberKey(event)"
+                                <input type="text" name="otp" pattern="[0-9]{6}" minlength="6" maxlength="6"
                                     class="form-control @error('otp') is-invalid @enderror" value="{{ old('otp') }}"
                                     id="otp" placeholder="XXXXXX">
+
                             </div>
                             @error('otp')
                                 <span class="error-text" role="alert">{{ $message }}</span>
@@ -338,9 +381,27 @@
                             @enderror
                         </div>
 
+                        @php($s = session('sheetMatch'))
+
+                        @if (session('verified_ok') && session('sheetMatch'))
+                            <div
+                                style="margin-top:14px; background:#ecfdf5; border:1px solid #34d399; color:#065f46; border-radius:12px; padding:12px;">
+                                <strong> بيانات المطابقة </strong>
+                                <ul style="margin:8px 0 0; padding-right:18px; line-height:1.9">
+                                    <li>رقم الضمان: <b>{{ session('insured_no') ?? '—' }}</b></li>
+                                    @if (session('pension_no'))
+                                        <li>رقم المعاش: <b>{{ session('pension_no') }}</b></li>
+                                    @endif
+                                    <li>رقم الحساب: <b>{{ session('account_no') ?? '—' }}</b></li>
+                                    <li>إجمالي المرتب: <b>{{ session('total_pension') ?? '—' }}</b></li>
+                                </ul>
+                            </div>
+                        @endif
+
+
                         {{-- نوع جهة العمل (يظهر فقط عند 7 أو 8) --}}
                         <div id="workCategoryBlock" class="form-group" style="display:none;">
-                            <label for="work_category_id">نوع جهة العمل (work_categories)</label>
+                            <label for="work_category_id">نوع جهة العمل </label>
                             <div class="input-icon">
                                 <i class="fa fa-briefcase"></i>
                                 <select id="work_category_id" name="work_category_id">
@@ -373,6 +434,8 @@
                             @enderror
                         </div>
 
+
+
                         <div class="actions">
                             <button id="btnSubmit" class="btn" type="submit">تأكيد</button>
                         </div>
@@ -394,6 +457,133 @@
 
         </div>
     </div>
+
+    <script>
+        $(document).ready(function() {
+            $('#institution_id').select2({
+                dir: "rtl", // يمين لليسار
+                placeholder: "اختر جهة العمل...",
+                allowClear: true, // يسمح تمسح الاختيار
+                width: "100%" // ياخذ عرض كامل
+            });
+        });
+    </script>
+
+    <script>
+        (function() {
+            const catSelect = document.getElementById('beneficiariesSupCategories');
+            const wcBlock = document.getElementById('workCategoryBlock');
+            const wcSelect = document.getElementById('work_category_id');
+            const instBlock = document.getElementById('institutionBlock');
+            const instSelect = document.getElementById('institution_id');
+
+            const needsWorkCat = id => id === '7' || id === '8';
+
+            // ✅ خريطة الخيارات المسموحة لكل فئة
+            const ALLOWED_BY_CAT = {
+                '7': new Set(['19', '20']), // قطاع عام
+                '8': new Set(['21']), // قطاع خاص (خيار واحد)
+            };
+
+            function filterWorkCategories() {
+                const cat = catSelect.value || '';
+                const allowed = ALLOWED_BY_CAT[cat];
+
+                // أظهر/أخفِ خيارات نوع جهة العمل حسب الفئة
+                Array.from(wcSelect.options).forEach(opt => {
+                    if (!opt.value) {
+                        opt.style.display = '';
+                        return;
+                    } // placeholder
+                    if (!allowed) {
+                        opt.style.display = '';
+                        return;
+                    } // لو مش 7 أو 8: أظهر الكل
+                    opt.style.display = allowed.has(String(opt.value)) ? '' : 'none';
+                });
+
+                // لو الخيار الحالي أصبح مخفي، فضّي الاختيار ونظّف جهات العمل
+                const selectedHidden = wcSelect.selectedOptions[0] && wcSelect.selectedOptions[0].style.display ===
+                    'none';
+                if (selectedHidden) {
+                    wcSelect.value = '';
+                    instSelect.innerHTML = `<option value="">اختر جهة العمل...</option>`;
+                    wcSelect.dispatchEvent(new Event('change'));
+                }
+            }
+
+            // ✅ قفل/فكّ قفل "نوع جهة العمل" بناءً على الفئة
+            function lockWorkCategoryIfSingle() {
+                const cat = catSelect.value || '';
+                const allowed = ALLOWED_BY_CAT[cat];
+
+                // لو الفئة 8 (خاص) وفيه خيار واحد فقط: ثبّت القيمة واعمِل disable
+                if (allowed && allowed.size === 1) {
+                    const only = [...allowed][0];
+                    // تأكد أنه ظاهر بعد الفلترة
+                    wcSelect.value = only;
+                    wcSelect.disabled = true;
+                    // فعّل تحميل المؤسسات للخيار المثبّت
+                    wcSelect.dispatchEvent(new Event('change'));
+                } else {
+                    // باقي الحالات: خليه قابل للتعديل
+                    wcSelect.disabled = false;
+                }
+            }
+
+            // ✅ نفس منطقك لإظهار بلوكات الجهة للفئات 7 و8 + مع القفل
+            catSelect.addEventListener('change', () => {
+                const selected = catSelect.value || '';
+                const show = needsWorkCat(selected);
+
+                wcBlock.style.display = show ? '' : 'none';
+                instBlock.style.display = show ? '' : 'none';
+
+                wcSelect.toggleAttribute('required', show);
+                instSelect.toggleAttribute('required', show);
+
+                if (!show) {
+                    wcSelect.value = '';
+                    wcSelect.disabled = false; // فك القفل عند الخروج من 7/8
+                    instSelect.innerHTML = `<option value="">اختر جهة العمل...</option>`;
+                }
+
+                filterWorkCategories();
+                lockWorkCategoryIfSingle(); // << القفل هنا
+            });
+
+            // عند تغيير نوع الجهة، حمّل المؤسسات حسب النوع
+            wcSelect.addEventListener('change', () => {
+                const wcId = wcSelect.value || '';
+                if (!wcId) {
+                    instSelect.innerHTML = `<option value="">اختر جهة العمل...</option>`;
+                    return;
+                }
+                const list = INSTITUCIONS.filter(x => String(x.work_categories_id) === String(wcId));
+                const opts = [`<option value="">اختر جهة العمل...</option>`];
+                for (const it of list) {
+                    opts.push(`<option value="${it.id}">${it.name ?? it.title ?? ''}</option>`);
+                }
+                instSelect.innerHTML = opts.join('');
+            });
+
+            // ✅ عند التحميل (لدعم old())
+            document.addEventListener('DOMContentLoaded', () => {
+                const oldCat = "{{ old('beneficiariesSupCategories') }}";
+                const show = needsWorkCat(oldCat);
+
+                wcBlock.style.display = show ? '' : 'none';
+                instBlock.style.display = show ? '' : 'none';
+                wcSelect.toggleAttribute('required', show);
+                instSelect.toggleAttribute('required', show);
+
+                filterWorkCategories();
+                lockWorkCategoryIfSingle(); // << يطبّق القفل في حالة old() أيضاً
+            });
+        })();
+    </script>
+
+
 
     <script>
         // إدخال أرقام فقط
@@ -486,29 +676,28 @@
 </body>
 
 <script>
-function sendotp() {
-    let phone = document.getElementById('phone').value;
+    function sendotp() {
+        let phone = document.getElementById('phone').value;
 
-    if (phone === '') {
-        alert('الرجاء إدخال رقم الهاتف');
-        return;
-    }
-
-    // نحط رقم الهاتف في الـ URL
-    fetch("{{ url('/sendotp') }}/" + phone)
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            document.getElementById("demo").innerText = "✅ " + data.message;
-        } else {
-            document.getElementById("demo").innerText = "❌ " + data.message;
+        if (phone === '') {
+            alert('الرجاء إدخال رقم الهاتف');
+            return;
         }
-    })
-    .catch(error => {
-        console.error("Error:", error);
-        document.getElementById("demo").innerText = "❌ حدث خطأ غير متوقع";
-    });
-}
+
+        fetch("{{ url('/sendotp') }}/" + phone)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById("demo").innerText = "✅ " + data.message + " (OTP: " + data.otp + ")";
+                } else {
+                    document.getElementById("demo").innerText = "❌ " + data.message;
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                document.getElementById("demo").innerText = "❌ حدث خطأ غير متوقع";
+            });
+    }
 </script>
 
 </html>
