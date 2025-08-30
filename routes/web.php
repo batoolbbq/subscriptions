@@ -10,6 +10,7 @@ use App\Http\Controllers\beneficiarieSupCategoryController;
 use App\Http\Controllers\beneficiariesCategoriesController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\MunicipalController;
+use Illuminate\Support\Facades\Validator;
 
 
 
@@ -23,14 +24,18 @@ use App\Http\Controllers\MunicipalController;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+    Route::post('/cra/family', [App\Http\Controllers\CustomerController::class, 'lookup'])->name('cra.lookup2');
+
 
 Route::get('/', function () {
     return view('welcome');
 });
 
     Route::get('/RegisterView', [App\Http\Controllers\CustomerController::class, 'registerCustomerByAdmin2'])->name('register-customerr');
+        Route::get('/customers/register/step2', [App\Http\Controllers\CustomerController::class, 'test2'])->name('customers.register.step2');
 
-    Route::get('/CheckCustomer', [App\Http\Controllers\CustomerController::class, 'checksheet'])->name('check-customer');
+
+    Route::post('/CheckCustomer', [App\Http\Controllers\CustomerController::class, 'test'])->name('check-customer');
     // Route::post('/StoreCustomer', [App\Http\Controllers\CustomerController::class, 'saveCustomersByAdmin'])->name('store-customer');
 
 Route::get('/sendotp/{phone}', [App\Http\Controllers\CustomerController::class, 'OTP'])->name('send-otp');

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-// use App\Http\Controllers\NidController;
+use App\Http\Controllers\NidController;
 use App\Models\Bloodtype;
 use App\Models\City;
 use App\Models\Customer;
@@ -36,20 +36,22 @@ use RealRashid\SweetAlert\Facades\Alert;
 use Session;
 use App\Services\SmsApiServiceMadar;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+ use Illuminate\Support\Str;
 
 
 class CustomerController extends Controller
 {
     private $sms;
     private $sms2;
-    // private $nid;
+    private $nid;
     public $data;
     // NidController $nid
-    public function __construct(SmsApiServiceMadar $api, SmsApiServiceLibyana $api2)
+    public function __construct(SmsApiServiceMadar $api, SmsApiServiceLibyana $api2,NidController $nid)
     {
         $this->sms = $api;
         $this->sms2 = $api2;
-        // $this->nid = $nid;
+        $this->nid = $nid;
 
     }
 
@@ -107,6 +109,8 @@ class CustomerController extends Controller
         return view('frontend.RegisterBeneficiary.index', ['beneficiariesSupCategories' => $beneficiariesSupCategories]);
 
     }
+
+
 
 
 
@@ -282,145 +286,478 @@ class CustomerController extends Controller
     }
     
     
-        public function checkIdentity(Request $request)
-    {
-        $messages = [
-            'phone.required' => "الرجاء ادخال رقم الهاتف",
-            'phone.starts_with' => "رقم الهاتف يجب أن يبدأ بـ 91 أو 92 أو 93 أو 94 أو 21",
-            'nationalID.required' => "الرجاء ادخال رقم الوطني",
-            'nationalID.unique' => "الرقم الوطني مستخدم من قبل",
-            'otp.required' => "الرجاء ادخال الرمز ",
-            'work_category_id.required_if' => 'يرجى اختيار نوع جهة العمل للفئات 7 أو 8',
-            'institution_id.required_if'   => 'يرجى اختيار جهة العمل للفئات 7 أو 8',
-        ];
+  
 
-        $this->validate($request, [
-            'phone'                      => 'required|digits_between:9,9|numeric|starts_with:91,92,94,21,93',
-            'nationalID'                 => ['required','unique:customers,nationalID','digits_between:12,12','starts_with:2,1'],
-            'otp'                        => 'required|digits_between:6,6',
-            'beneficiariesSupCategories' => ['required'],
-            'work_category_id'           => 'required_if:beneficiariesSupCategories,7,8|nullable',
-            'institution_id'             => 'required_if:beneficiariesSupCategories,7,8|nullable',
-        ], $messages);
 
-        $customer = Customer::where('phone', $request->phone)->first();
-        if ($customer) {
-            Alert::error('رقم الهاتف مسجل مسبقاً');
-            return redirect()->back()->withInput();
-        }
+//     public function checkIdentity(Request $request)
+// {
+//     // رسائل التحقق
+//     $messages = [
+//         'phone.required'                => "الرجاء ادخال رقم الهاتف",
+//         'phone.starts_with'             => "رقم الهاتف يجب أن يبدأ بـ 91 أو 92 أو 93 أو 94 أو 21",
+//         'nationalID.required'           => "الرجاء ادخال رقم الوطني",
+//         'nationalID.unique'             => "الرقم الوطني مستخدم من قبل",
+//         'otp.required'                  => "الرجاء ادخال الرمز ",
+//         'work_category_id.required_if'  => 'يرجى اختيار نوع جهة العمل للفئات 7 أو 8',
+//         'institution_id.required_if'    => 'يرجى اختيار جهة العمل للفئات 7 أو 8',
+//     ];
 
-        $ve = Verification::where('phone', $request->phone)->first();
-        if (!$ve) {
-            Alert::error('لم يتم إرسال رمز تحقق لهذا الرقم');
-            return redirect()->route('register-customer')->withInput();
-        }
+//     // التحقق من المدخلات
+//     $this->validate($request, [
+//         'phone'                      => 'required|digits_between:9,9|numeric|starts_with:91,92,94,21,93',
+//         'nationalID'                 => ['required','unique:customers,nationalID','digits_between:12,12','starts_with:2,1'],
+//         'otp'                        => 'required|digits_between:6,6',
+//         'beneficiariesSupCategories' => ['required'],
+//         'work_category_id'           => 'required_if:beneficiariesSupCategories,7,8|nullable',
+//         'institution_id'             => 'required_if:beneficiariesSupCategories,7,8|nullable',
+//     ], $messages);
 
-        $expiresAt = Carbon::parse($ve->otp_time)->addMinute(2);
-        if (now()->gte($expiresAt)) {
-            $ve->otp = mt_rand(100000, 999999);
-            $ve->save();
-            Alert::error('لقد انتهت صلاحية رمز التحقق');
-            return redirect()->route('register-customer')->withInput();
-        }
-        if ($ve->otp != $request->otp) {
-            Alert::error('رمز التحقق غير صحيح الرجاء التأكد');
-            return redirect()->route('register-customer')->withInput();
-        }
-        $ve->save();
-        Alert::success('تمت عملية التحقق بنجاح');
+//     // تمنع تكرار الهاتف
+//     $customer = Customer::where('phone', $request->phone)->first();
+//     if ($customer) {
+//         Alert::error('رقم الهاتف مسجل مسبقاً');
+//         return redirect()->back()->withInput();
+//     }
 
-        // NID (اختياري – نفس منطقك)
-        // $nidAr = $this->nid ? $this->nid->getNidData($request->nationalID) : null;
-        // $nidEn = $this->nid ? $this->nid->getNidEnData($request->nationalID) : null;
-        // if ($this->nid && $nidAr == "Nid Not Found!") {
-        //     Alert::error('هذا الرقم غير موجود الرجاء التأكد');
-        //     return redirect()->back()->withInput();
-        // }
-        // if ($this->nid && $nidAr && !$nidAr->isLife) {
-        //     Alert::error('لايمكنك الاستفادة من الخدمة ');
-        //     return redirect()->back()->withInput();
-        // }
+//     // تحقق الـ OTP
+//     $ve = Verification::where('phone', $request->phone)->first();
+//     if (!$ve) {
+//         Alert::error('لم يتم إرسال رمز تحقق لهذا الرقم');
+//         return redirect()->route('register-customer')->withInput();
+//     }
 
-        // $fullNameArabic = $fullNameEnglish = $birtdate = $gendertype = null;
-        // if ($this->nid && $nidAr) {
-        //     $fullNameArabic  = $nidAr->firstName.' '.$nidAr->fatherName.' '.$nidAr->grandFatherName.' '.$nidAr->surName;
-        //     $fullNameEnglish = $nidEn ? ($nidEn->FirstNameEn.' '.$nidEn->FatherNameEn.' '.$nidEn->GrandFatherNameEn.' '.$nidEn->SurNameEn) : null;
-        //     $parts = explode('T00', $nidAr->birthDate); $birtdate = $parts[0] ?? null;
-        //     $gendertype = substr($nidAr->nationalID, 0, 1);
-        // }
+//     $expiresAt = Carbon::parse($ve->otp_time)->addMinute(2);
+//     if (now()->gte($expiresAt)) {
+//         $ve->otp = mt_rand(100000, 999999);
+//         $ve->save();
+//         Alert::error('لقد انتهت صلاحية رمز التحقق');
+//         return redirect()->route('register-customer')->withInput();
+//     }
+//     if ($ve->otp != $request->otp) {
+//         Alert::error('رمز التحقق غير صحيح الرجاء التأكد');
+//         return redirect()->route('register-customer')->withInput();
+//     }
+//     $ve->save();
+//     Alert::success('تمت عملية التحقق بنجاح');
 
-        // منطقك القديم للفئات 2 و 3 (اختياري)
-        // $Customer = null; $warrantynumber = null;
-        // if ((int)$request->beneficiariesSupCategories === 2 && $this->nid && $nidAr) {
-        //     if ($nidAr->nationalID[0] != 2) { Alert::error(' نأسف لايمكنك الاستفادة من الخدمة '); return back()->withInput(); }
-        //     $Customer = Customer::where('registrationnumbers',$nidAr->quidNumber)->where('gender',1)->first();
-        //     if (!$Customer) { Alert::error(' المشترك الرئيسي غير مسجل '); return back()->withInput(); }
-        // }
-        // if ((int)$request->beneficiariesSupCategories === 3 && $this->nid && $nidAr) {
-        //     if ($nidAr->nationalID[0] != 2) { Alert::error(' نأسف لايمكنك الاستفادة من الخدمة '); return back()->withInput(); }
-        //     $warrantynumber = dead_retirees::where('registrationnumbers',$nidAr->quidNumber)->first();
-        // }
+//     // متغيّرات افتراضية لتجنّب undefined vars
+//     $fullNameArabic   = null;
+//     $fullNameEnglish  = null;
+//     $birtdate         = null;
+//     $gendertype       = null;
+//     $nidAr            = null;
+//     $nidEn            = null;
+//     $Customer         = null;
+//     $warrantynumber   = null;
 
-        // ✅ الشيك من الشيت: فقط لو الفئة تتبع جهة عمل (مثال 7 أو 8)
-        // $insured_no = $pension_no = $account_no = $total_pension = null;
-        $needsInstitution = in_array((string)$request->beneficiariesSupCategories, ['7','8'], true);
+//     // قيم الشيت الافتراضية
+//     $insured_no    = null;
+//     $pension_no    = null;
+//     $account_no    = null;
+//     $total_pension = null;
 
-        if ($needsInstitution) {
-            if (!$request->institution_id) {
-                Alert::error('الرجاء اختيار جهة العمل للفئات المحددة (7 أو 8)');
-                return back()->withInput();
-            }
-            $row = InstitucionSheetRow::where('national_id',$request->nationalID)
-                    ->where('institucion_id',$request->institution_id)
-                    ->first();
-            if (!$row) {
-                Alert::error('لم يتم العثور على بيانات مطابقة في الشيت (الرقم الوطني + جهة العمل)');
-                return back()->withInput();
-            }
-            $insured_no    = $row->insured_no;
-            $pension_no    = $row->pension_no;
-            $account_no    = $row->account_no;
-            $total_pension = $row->total_pension;
-        }
-        // غير ذلك: ما فيش شيك شيت — تبقى القيم null
+//     // هل الفئة تتبع جهة عمل؟
+//     $needsInstitution = in_array((string)$request->beneficiariesSupCategories, ['7','8'], true);
 
-        // قوائمك المعتادة
-        $nationality      = Nationality::orderBy('name','ASC')->get();
-        $bloodtype        = Bloodtype::orderBy('name','ASC')->get();
-        $city             = City::orderBy('name','ASC')->get();
-        $socialstatuses   = Socialstatus::orderBy('name','ASC')->get();
-        $beneficiariesSC  = beneficiariesSupCategories::all();
-        $warrantyoffices  = Warrantyoffice::orderBy('name','ASC')->get();
-        $healthfacilities = Healthfacilities::orderBy('name','ASC')->get();
-        $guarantybranch   = guarantybranch::orderBy('name','ASC')->get();
-        $Chronicdiseases  = Chronicdiseases::all();
+//     // تحقق الشيت + استدعاء CRA فقط للفئات التابعة لجهة عمل
+//     $craStatus       = false;
+//     $craMembers      = [];
+//     $craMembersCount = 0;
+//     $craError        = null;
 
-        return view('frontend.registerCustomersByAdmin')
-            ->with('bloodtype',$bloodtype)
-            ->with('city',$city)
-            ->with('socialstatuses',$socialstatuses)
-            ->with('nationality',$nationality)
-            ->with('fullNameArabic',$fullNameArabic)
-            ->with('fullNameEnglish',$fullNameEnglish)
-            ->with('birtdate',$birtdate)
-            ->with('gendertype',$gendertype)
-            ->with('nidAr',$nidAr)
-            ->with('nidEn',$nidEn)
-            ->with('phoneNum',$request->phone)
-            ->with('Chronicdiseases',$Chronicdiseases)
-            ->with('guarantybranch',$guarantybranch)
-            ->with('warrantyoffices',$warrantyoffices)
-            ->with('healthfacilities',$healthfacilities)
-            ->with('beneficiariesSupCategories',$beneficiariesSC)
-            ->with('beneficiariesSupCategoriesType',$request->beneficiariesSupCategories)
-            ->with('Customer',$Customer)
-            ->with('warrantynumber',$warrantynumber)
-            // قيم الشيت (تكون null لو الفئة لا تتبع جهة عمل)
-            ->with('insured_no',$insured_no)
-            ->with('pension_no',$pension_no)
-            ->with('account_no',$account_no)
-            ->with('total_pension',$total_pension);
+//     if ($needsInstitution) {
+//         if (!$request->institution_id) {
+//             Alert::error('الرجاء اختيار جهة العمل للفئات المحددة (7 أو 8)');
+//             return back()->withInput();
+//         }
+
+//         // البحث في الشيت (الرقم الوطني + جهة العمل)
+//         $row = InstitucionSheetRow::where('national_id', $request->nationalID)
+//             ->where('institucion_id', $request->institution_id)
+//             ->first();
+
+//         if (!$row) {
+//             Alert::error('لم يتم العثور على بيانات مطابقة في الشيت (الرقم الوطني + جهة العمل)');
+//             return back()->withInput();
+//         }
+
+//         // حفظ بعض القيم من الشيت (لو تبي تعرضيها في الفورم)
+//         $insured_no    = $row->insured_no;
+//         $pension_no    = $row->pension_no;
+//         $account_no    = $row->account_no;
+//         $total_pension = $row->total_pension;
+
+//         // ************** نداء CRA باستخدام family_registry_no **************
+//         $registryNumberForApi = $row->family_registry_no ?: '';
+
+//         try {
+//             $craResponse = Http::timeout(12)
+//                 ->withOptions(['verify' => false]) // في حال شبكة داخلية أو SSL غير مضبوط
+//                 ->post('http://10.110.110.90/api/Phif-cra', [
+//                     'NationalID'     => (string) $request->nationalID,
+//                     'RegistryNumber' => (string) $registryNumberForApi,
+//                 ]);
+
+//             if (!$craResponse->successful()) {
+//                 $craError = 'تعذر الاتصال بخدمة CRA (HTTP '.$craResponse->status().')';
+//             } else {
+//                 $js       = $craResponse->json();
+//                 $craStatus = (bool) data_get($js, 'status', false);
+//                 $data      = (array) data_get($js, 'data', []);
+//                 $members   = (array) data_get($data, 'members', []);
+
+//                 if ($craStatus && is_array($members)) {
+//                     $craMembers = collect($members)->map(function ($m) {
+//                         $birthDateRaw = data_get($m, 'birthDate');
+//                         $birthDate    = $birthDateRaw ? (explode('T', $birthDateRaw)[0] ?? $birthDateRaw) : null;
+
+//                         return [
+//                             'nationalID'            => data_get($m, 'nationalID'),
+//                             'arabicFirstName'       => data_get($m, 'arabicFirstName'),
+//                             'arabicFatherName'      => data_get($m, 'arabicFatherName'),
+//                             'arabicGrandFatherName' => data_get($m, 'arabicGrandFatherName'),
+//                             'arabicFamilyName'      => data_get($m, 'arabicFamilyName'),
+//                             'arabicMotherName'      => data_get($m, 'arabicMotherName'),
+//                             'birthDate'             => $birthDate,
+//                             'birthPlace'            => data_get($m, 'birthPlace'),
+//                             'gender'                => data_get($m, 'gender'),       // 0/1
+//                             'isALive'               => data_get($m, 'isALive'),      // "Y"/"N"
+//                             'relationship'          => data_get($m, 'relationship'), // 1/2/3...
+//                             'status'                => data_get($m, 'status'),
+//                         ];
+//                     })->all();
+
+//                     $craMembersCount = (int) (data_get($data, 'membersCount') ?? count($craMembers));
+//                 } else {
+//                     $craError = 'التحقق من CRA لم يرجع بيانات صالحة';
+//                 }
+//             }
+//         } catch (\Throwable $e) {
+//             $craError = 'خطأ أثناء الاتصال بخدمة CRA: '.$e->getMessage();
+//         }
+
+//         // لو تحبي تفشّلي العملية عند فشل خدمة CRA فعّلي السطور التالية:
+//         // if ($craError) {
+//         //     Alert::error($craError);
+//         //     return back()->withInput();
+//         // }
+//         // *********************************************
+//     }
+
+//     // القوائم المعتادة
+//     $nationality      = Nationality::orderBy('name','ASC')->get();
+//     $bloodtype        = Bloodtype::orderBy('name','ASC')->get();
+//     $city             = City::orderBy('name','ASC')->get();
+//     $socialstatuses   = Socialstatus::orderBy('name','ASC')->get();
+//     $beneficiariesSC  = beneficiariesSupCategories::all();
+//     $warrantyoffices  = Warrantyoffice::orderBy('name','ASC')->get();
+//     $healthfacilities = Healthfacilities::orderBy('name','ASC')->get();
+//     $guarantybranch   = guarantybranch::orderBy('name','ASC')->get();
+//     $Chronicdiseases  = Chronicdiseases::all();
+
+//     return view('frontend.registerCustomersByAdmin')
+//         ->with('bloodtype', $bloodtype)
+//         ->with('city', $city)
+//         ->with('socialstatuses', $socialstatuses)
+//         ->with('nationality', $nationality)
+//         ->with('fullNameArabic', $fullNameArabic)
+//         ->with('fullNameEnglish', $fullNameEnglish)
+//         ->with('birtdate', $birtdate)
+//         ->with('gendertype', $gendertype)
+//         ->with('nidAr', $nidAr)
+//         ->with('nidEn', $nidEn)
+//         ->with('phoneNum', $request->phone)
+//         ->with('Chronicdiseases', $Chronicdiseases)
+//         ->with('guarantybranch', $guarantybranch)
+//         ->with('warrantyoffices', $warrantyoffices)
+//         ->with('healthfacilities', $healthfacilities)
+//         ->with('beneficiariesSupCategories', $beneficiariesSC)
+//         ->with('beneficiariesSupCategoriesType', $request->beneficiariesSupCategories)
+//         ->with('Customer', $Customer)
+//         ->with('warrantynumber', $warrantynumber)
+//         // قيم الشيت
+//         ->with('insured_no', $insured_no)
+//         ->with('pension_no', $pension_no)
+//         ->with('account_no', $account_no)
+//         ->with('total_pension', $total_pension)
+//         // نتائج CRA
+//         ->with('craStatus', $craStatus)
+//         ->with('craMembers', $craMembers)
+//         ->with('craMembersCount', $craMembersCount)
+//         ->with('craError', $craError);
+// }
+
+    public function test(Request $request){
+           $nationalId         = $request->nationalID;
+    $registryNumber     = $request->family_registry_no;
+    $phone              = $request->phone;
+    $benefCat           = (string) $request->beneficiariesSupCategories;
+    $institutionId      = $request->institution_id;
+
+    // (اختياري) منع تكرار الهاتف
+    if ($phone && \App\Models\Customer::where('phone', $phone)->exists()) {
+        return back()->withErrors(['phone' => 'رقم الهاتف مسجل مسبقاً'])->withInput();
     }
+
+    // =========================
+    // A) ربط مصلحة الأحوال (CRA) — نفس منطقك تماماً
+    // =========================
+    $craOk         = false;
+    $craMain       = null;
+    $craDependents = collect();
+    $craCount      = 0;
+
+    try {
+
+        // $nidEn = $this->nid->getNidEnData($nationalId);
+        // // تحبّي تشوفيها مؤقتاً:
+        // dd($nidEn);
+
+        // ✅ 4) تسجيل الدخول لجلب التوكن
+        $login = Http::timeout(10)
+            ->withOptions(['verify' => false])
+            ->post('http://10.110.110.90/api/login-api?email=cra@phif.gov.ly&password=cra%23@PasS');
+
+        if (!$login->successful()) {
+            return back()->withErrors([
+                'nationalID' => 'Login failed: HTTP '.$login->status(),
+            ])->withInput();
+        }
+
+        $token = data_get($login->json(), 'token');
+        if (!$token) {
+            return back()->withErrors([
+                'nationalID' => 'Login response has no token',
+            ])->withInput();
+        }
+
+        $resp = Http::timeout(30)
+            ->withOptions(['verify' => false])
+            ->withToken($token) // التوكن اللي جبته من /login-api
+            ->post('http://10.110.110.90/api/Phif-cra', [
+                'NationalID'     => $nationalId,
+                'RegistryNumber' => $registryNumber,
+            ]);
+
+        // return $resp->json();
+
+        if (!$resp->successful()) {
+            return back()->withErrors([
+                'nationalID' => 'CRA call failed: HTTP '.$resp->status(),
+            ])->withInput();
+        }
+
+        $json = $resp->json();
+        if (!$json || !data_get($json, 'status')) {
+            return back()->withErrors([
+                'nationalID' => 'CRA response invalid',
+            ])->withInput();
+        }
+
+        // ✅ 6) استخراج الأعضاء
+        $members = data_get($json, 'data.members', []);
+        $count   = data_get($json, 'data.membersCount', count($members));
+
+        // ✅ 7) تنسيق البيانات
+        $normalized = collect($members)->map(function ($m) {
+            $birthRaw = data_get($m,'birthDate');
+            $birth    = $birthRaw ? explode('T', $birthRaw)[0] : null;
+            return [
+                'nationalID'   => data_get($m,'nationalID'),
+                'name'         => trim((data_get($m,'arabicFirstName').' '.data_get($m,'arabicFatherName').' '.data_get($m,'arabicGrandFatherName').' '.data_get($m,'arabicFamilyName'))),
+                'mother'       => data_get($m,'arabicMotherName'),
+                'birthDate'    => $birth,
+                'birthPlace'   => data_get($m,'birthPlace'),
+                'gender'       => (data_get($m,'gender')==0 ? 'ذكر' : 'أنثى'),
+                'isAlive'      => (data_get($m,'isALive') === 'Y'),
+                'relationship' => data_get($m,'relationship'),
+                'status'       => data_get($m,'status'),
+            ];
+        });
+
+        $craMain       = $normalized->firstWhere('nationalID', $nationalId);
+        $craDependents = $normalized->where('nationalID', '!=', $nationalId)->values();
+        $craCount      = $count;
+        $craOk         = true;
+
+    } catch (\Throwable $e) {
+        return back()->withErrors([
+            'nationalID' => 'Exception: '.$e->getMessage(),
+        ])->withInput();
+    }
+
+    // =========================
+    // B) الشِّيت (للـفئات 7 أو 8 فقط)
+    // =========================
+    $sheetMatch       = null;
+    $needsInstitution = in_array($benefCat, ['7', '8'], true);
+
+    if ($needsInstitution) {
+        $sheetMatch = InstitucionSheetRow::where('national_id', $nationalId)
+                        ->where('institucion_id', $institutionId)
+                        ->first();
+
+        if (!$sheetMatch) {
+            // Useful hint: الرقم قد يكون موجود لكن لجهة أخرى
+            $existsNat = InstitucionSheetRow::where('national_id', $nationalId)->exists();
+
+            return back()->withErrors([
+                'institution_id' => $existsNat
+                    ? 'تم العثور على الرقم الوطني في الشيت لكنه مرتبط بجهة عمل مختلفة'
+                    : 'لم يتم العثور على بيانات مطابقة في الشيت (الرقم الوطني + جهة العمل)'
+            ])->withInput();
+        }
+    }
+
+    // =========================
+    // C) رجوع لنفس الصفحة مع النتائج في الـsession
+    // =========================
+   return redirect()->route('customers.register.step2')->with([
+        // CRA
+        'cra_ok'         => $craOk,
+        'cra_main'       => $craMain,
+        'cra_dependents' => $craDependents,
+        'cra_count'      => $craCount,
+
+        // Sheet (إن وُجدت)
+        'verified_ok'    => $craOk && ($needsInstitution ? (bool)$sheetMatch : true),
+        'sheetMatch'     => $sheetMatch,
+        'insured_no'     => $sheetMatch?->insured_no,
+        'pension_no'     => $sheetMatch?->pension_no,
+        'account_no'     => $sheetMatch?->account_no,
+        'total_pension'  => $sheetMatch?->total_pension,
+   ]);
+
+    }    
+
+    public function test2()
+    {
+
+        return view('customers.register_step2');
+    }
+
+  public function lookup(Request $request)
+    {
+            // return 1111;
+
+        // ✅ 1) الفالديشن الأساسي
+        // $v = Validator::make($request->all(), [
+        //     'nationalID'         => ['required','string','size:12'],
+        //     'family_registry_no' => ['required','string'],
+        // ], [
+        //     'nationalID.required' => 'الرجاء إدخال الرقم الوطني',
+        //     'nationalID.size'     => 'الرقم الوطني يجب أن يكون 12 رقم',
+        //     'family_registry_no.required' => 'الرجاء إدخال رقم القيد العائلي',
+        // ]);
+        // if ($v->fails()) {
+        //     return response()->json([
+        //         'ok'    => false,
+        //         'error' => $v->errors()->first(),
+        //         'errors'=> $v->errors()
+        //     ], 422);
+        // }
+
+        // // ✅ 2) قراءة البيانات من الفورم
+        $nationalId     = $request->nationalID;
+        $registryNumber = $request->family_registry_no;
+
+        // ✅ 3) قراءة بيانات الدخول من .env
+        $email    = 'cra@phif.gov.ly';
+        $password = 'cra%23@PasS';
+
+        try {
+            // ✅ 4) تسجيل الدخول لجلب التوكن
+           $login = Http::timeout(10)
+            ->withOptions(['verify' => false])
+            ->post('http://10.110.110.90/api/login-api?email=cra@phif.gov.ly&password=cra%23@PasS');
+
+
+            if (!$login->successful()) {
+                return response()->json([
+                    'ok' => false,
+                    'error' => 'Login failed: HTTP '.$login->status(),
+                    'body' => $login->body(),
+                ], 502);
+            }
+
+            $token = data_get($login->json(), 'token');
+            if (!$token) {
+                return response()->json([
+                    'ok' => false,
+                    'error' => 'Login response has no token',
+                    'json'  => $login->json(),
+                ], 502);
+            }
+
+            $resp = Http::timeout(30)
+                ->withOptions(['verify' => false])
+                ->withToken($token) // التوكن اللي جبته من /login-api
+                ->post('http://10.110.110.90/api/Phif-cra', [
+                    'NationalID'     => $nationalId,
+                    'RegistryNumber' => $registryNumber,
+                ]);
+
+            // return $resp->json();
+
+            if (!$resp->successful()) {
+                return response()->json([
+                    'ok' => false,
+                    'error' => 'CRA call failed: HTTP '.$resp->status(),
+                    'body' => $resp->body(),
+                ], 502);
+            }
+
+            $json = $resp->json();
+            if (!$json || !data_get($json, 'status')) {
+                return response()->json([
+                    'ok' => false,
+                    'error' => 'CRA response invalid',
+                    'json' => $json,
+                ], 422);
+            }
+
+            // ✅ 6) استخراج الأعضاء
+            $members = data_get($json, 'data.members', []);
+            $count   = data_get($json, 'data.membersCount', count($members));
+
+            // ✅ 7) تنسيق البيانات
+            $normalized = collect($members)->map(function ($m) {
+                $birthRaw = data_get($m,'birthDate');
+                $birth    = $birthRaw ? explode('T', $birthRaw)[0] : null;
+                return [
+                    'nationalID'  => data_get($m,'nationalID'),
+                    'name'        => trim((data_get($m,'arabicFirstName').' '.data_get($m,'arabicFatherName').' '.data_get($m,'arabicGrandFatherName').' '.data_get($m,'arabicFamilyName'))),
+                    'mother'      => data_get($m,'arabicMotherName'),
+                    'birthDate'   => $birth,
+                    'birthPlace'  => data_get($m,'birthPlace'),
+                    'gender'      => (data_get($m,'gender')==0 ? 'ذكر' : 'أنثى'),
+                    'isAlive'     => (data_get($m,'isALive') === 'Y'),
+                    'relationship'=> data_get($m,'relationship'),
+                    'status'      => data_get($m,'status'),
+                ];
+            });
+
+          $main = $normalized->firstWhere('nationalID', $nationalId);
+            $dependents = $normalized->where('nationalID', '!=', $nationalId)->values();
+
+            return response()->json([
+                'ok'         => true,
+                'count'   => $count,
+                'main'       => $main,
+                'dependents' => $dependents,
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'Exception: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+
+
 
 
 
@@ -494,6 +831,7 @@ class CustomerController extends Controller
 
 
 
+    
 
 
 
