@@ -90,5 +90,17 @@ class Customer extends Model
     {
         return $this->hasMany(Martyrs_wounded::class, 'customer_id', 'id');
     }
+
+     public function bank()
+    {
+        return $this->belongsTo(Bank::class, 'bank_id');
+    }
+
+    public function bankBranch()
+    {
+        return $this->belongsTo(BankBranch::class, 'bank_branch_id');
+    }
+
+   
     
 }

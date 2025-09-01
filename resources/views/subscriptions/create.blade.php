@@ -36,6 +36,39 @@
         </div>
 
         <div class="col-md-8">
+            {{-- رسائل النجاح/الفشل --}}
+            @if (session('success'))
+                <div class="alert alert-success"
+                    style="border:1.5px solid #bbf7d0;background:#f0fdf4;padding:12px;border-radius:14px;box-shadow:0 10px 28px rgba(0,0,0,.08);color:#166534;">
+                    <i class="fa-solid fa-circle-check"></i>
+                    {{ session('success') }}
+                    @if (session('api_response_status'))
+                        <div class="mt-1" style="font-size:.9rem;opacity:.8;">
+                            كود الاستجابة: {{ session('api_response_status') }}
+                        </div>
+                    @endif
+                </div>
+            @endif
+
+            @if (session('error'))
+                <div class="alert alert-danger"
+                    style="border:1.5px solid #fecaca;background:#fef2f2;padding:12px;border-radius:14px;box-shadow:0 10px 28px rgba(0,0,0,.08);color:#991b1b;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    {{ session('error') }}
+                    @if (session('api_error_status'))
+                        <div class="mt-1" style="font-size:.9rem;opacity:.8;">
+                            كود الاستجابة: {{ session('api_error_status') }}
+                        </div>
+                    @endif
+                    @if (session('api_error_details'))
+                        <details class="mt-2">
+                            <summary>تفاصيل الخطأ من الـ API</summary>
+                            <pre style="white-space:pre-wrap;margin:0">{{ session('api_error_details') }}</pre>
+                        </details>
+                    @endif
+                </div>
+            @endif
+
             {{-- الكارد الرئيسي --}}
             <div class="box-content"
                 style="border:1.5px solid #E5E7EB;border-radius:24px;box-shadow:0 18px 40px rgba(0,0,0,.12);overflow:hidden;background:#fff;">
@@ -53,7 +86,7 @@
                     <form method="POST" action="{{ route('subscriptions.store') }}">
                         @csrf
 
-                        {{-- الأخطاء --}}
+                        {{-- الأخطاء (Validator) --}}
                         @if ($errors->any())
                             <div class="alert alert-danger"
                                 style="border:1.5px solid #fecaca;background:#fef2f2;padding:12px;border-radius:14px;box-shadow:0 10px 28px rgba(0,0,0,.08);color:#991b1b;">
@@ -75,7 +108,7 @@
                                 value="{{ old('name') }}" required>
                         </div>
 
-                        {{-- فئة جهة العمل --}}
+                        {{-- فئة (beneficiaries_categories_id) --}}
                         <div class="form-group">
                             <label
                                 style="display:block;margin-bottom:6px;color:#6b7280;font-size:.95rem;font-weight:700;">فئة</label>

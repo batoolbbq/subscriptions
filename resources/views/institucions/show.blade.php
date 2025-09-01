@@ -63,18 +63,14 @@
                         @endforeach
                     </ul>
 
+                    {{-- زر يفتح SweetAlert لطلب الترميز ثم يرسل فورم خفي بـ force=1 --}}
                     @can('institucions.toggle-status')
                         @if (!$institucion->status)
-                            <form action="{{ route('institucions.toggle-status', $institucion) }}" method="POST"
-                                class="mt-2">
-                                @csrf @method('PATCH')
-                                <input type="hidden" name="force" value="1">
-                                <button type="submit"
-                                    style="padding:8px 16px;border:1.5px solid #f59e0b;border-radius:999px;
-                                               background:#fff7ed;color:#92400e;font-weight:800;font-size:.85rem;">
-                                    تفعيل رغم التشابه
-                                </button>
-                            </form>
+                            <button type="button" id="btn-activate-anyway"
+                                style="padding:8px 16px;border:1.5px solid #f59e0b;border-radius:999px;
+                                       background:#fff7ed;color:#92400e;font-weight:800;font-size:.85rem;">
+                                تفعيل رغم التشابه
+                            </button>
                         @endif
                     @endcan
                 @endif
@@ -208,7 +204,70 @@
                     </div>
                 </div>
             </div>
+
+            {{-- فورم خفي لإرسال force=1 + code عند "تفعيل رغم التشابه" --}}
+            @can('institucions.toggle-status')
+                <form id="force-activate-form" action="{{ route('institucions.toggle-status', $institucion) }}" method="POST"
+                    style="display:none;">
+                    @csrf
+                    @method('PATCH')
+                    <input type="hidden" name="force" value="1">
+                    <input type="hidden" name="code" id="force-code-input">
+                </form>
+            @endcan
+
         </div> {{-- .row --}}
 
     </div> {{-- .container --}}
 @endsection
+
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        (function() {
+            const btn = document.getElementById('btn-activate-anyway');
+            if (!btn) return;
+
+            btn.addEventListener('click', async function() {
+                // لو الجهة ما عندهاش ترميز → طالب به
+                const hasCode = {{ $institucion->code ? 'true' : 'false' }};
+
+                let codeVal = '';
+                if (!hasCode) {
+                    const {
+                        value: inputCode
+                    } = await Swal.fire({
+                        title: 'أدخل ترميز جهة العمل',
+                        input: 'text',
+                        inputLabel: 'الترميز مطلوب للتفعيل',
+                        inputPlaceholder: 'مثال: HR-TR-2025',
+                        inputValidator: (v) => {
+                            if (!v || v.trim() === '') return 'الترميز مطلوب';
+                        },
+                        showCancelButton: true,
+                        confirmButtonText: 'تفعيل',
+                        cancelButtonText: 'إلغاء'
+                    });
+                    if (!inputCode) return; // ألغى
+                    codeVal = inputCode.trim();
+                } else {
+                    // عنده ترميز مسبقًا → بس تأكيد بسيط
+                    const ok = await Swal.fire({
+                        title: 'تفعيل رغم التشابه؟',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'نعم، فعّل',
+                        cancelButtonText: 'إلغاء'
+                    });
+                    if (!ok.isConfirmed) return;
+                }
+
+                // جهزي وأرسلي الفورم الخفي
+                const form = document.getElementById('force-activate-form');
+                const hiddenCode = document.getElementById('force-code-input');
+                if (codeVal) hiddenCode.value = codeVal;
+                form.submit();
+            });
+        })();
+    </script>
+@endpush

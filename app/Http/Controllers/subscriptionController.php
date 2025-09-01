@@ -11,6 +11,16 @@ use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
 use RealRashid\SweetAlert\Facades\Alert;
     use Illuminate\Support\Facades\Http;
+    
+use Illuminate\Support\Facades\Log;
+
+/**
+ * يرسل الاشتراك إلى الـ API الخارجي.
+ *
+ * @param  \App\Models\Subscription $subscription
+ * @param  \Illuminate\Support\Collection|array $validTypes  (مصفوفة/كولكشن من الأنواع المكتملة)
+ * @return array
+ */
 
 
 use Illuminate\Support\Facades\DB;
@@ -79,7 +89,6 @@ class SubscriptionController extends Controller
                 $item['value'] !== '' && $item['is_percentage'] !== '' && $item['duration'] !== '';
         });
 
-        // التحقق من incomplete types (مدخلة جزئيًا)
         $incompleteTypes = collect($types)->filter(function ($item) {
             $filledCount = collect($item)->filter(fn($v) => $v !== null && $v !== '')->count();
             return $filledCount > 0 && $filledCount < 3;
@@ -119,11 +128,23 @@ class SubscriptionController extends Controller
                     'status' => 1,
                 ]);
             }
-
             DB::commit();
-            // $this->sendSubscriptionToApi($subscription, $validTypes);
+
+          return  $result = $this->sendSubscriptionToApi($subscription, $validTypes);
+
+            if (!$result['success']) {
+                // خيار 1: تكتفي بالتسجيل وتكمل عادي
+                // خيار 2: تعرض تنبيه للمستخدم بدون إلغاء الحفظ المحلي:
+                return redirect()
+                    ->route('subscriptions.index')
+                    ->with('warning', 'تم الحفظ محليًا لكن فشل إرسال البيانات للـ API الخارجي.');
+
+                // لو تبغى تكمل بدون رسائل:
+                // return redirect()->route('subscriptions.index')->with('success', 'تمت إضافة الاشتراك بنجاح');
+            }
 
             return redirect()->route('subscriptions.index')->with('success', 'تمت إضافة الاشتراك بنجاح');
+
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withInput()->withErrors('حدث خطأ أثناء الحفظ: ' . $e->getMessage());
@@ -134,44 +155,90 @@ class SubscriptionController extends Controller
 
     public function sendSubscriptionToApi($subscription, $validTypes)
     {
+        // إعدادات الاتصال ثابتة (بدون env)
+        $apiBaseUrl  = 'http://192.168.81.17:6060';
+        $apiEndpoint = '/admin/Subscriptions';
+        $apiUser     = 'admin';
+        $apiPass     = 'admin';
+
+        // ملاحظة: لو الـ API يتوقع 0 عند الإنشاء، خليه 0. لو يقبل id حقيقي، استخدم $subscription->id
         $payload = [
-            'id' => (int) $subscription->id,
-            'name' => $subscription->name,
-            'workCategoryId' => (int) $subscription->work_category_id,
-            'subscriptionValues' => [],
+            'id'             => 1,
+            'name'           => $subscription->name,
+            'workCategoryId' => 1,
+            'subscriptionValues' => collect($validTypes)->map(function ($data, $typeId) {
+                // لو مفاتيح المصفوفة هي IDs (1،2،3...) ممتاز؛ غير كذا نستخرج من داخل العنصر
+                $subscriptionTypeId = is_numeric($typeId) && (int)$typeId > 0
+                    ? (int)$typeId
+                    : (int)($data['subscription_type'] ?? $data['subscription_type_id'] ?? 0);
+
+                // حوّل 0/1 إلى Boolean للـ API
+                $isPercentage = isset($data['is_percentage'])
+                    ? ((int)$data['is_percentage'] === 1)
+                    : (bool)($data['isPercentage'] ?? false);
+
+                return [
+                    'subscriptionType' => $subscriptionTypeId,
+                    'value'        => isset($data['value']) ? (float)$data['value'] : 0.0,
+                    'isPercentage' => $isPercentage,
+                    'duration'     => isset($data['duration']) ? (int)$data['duration'] : 0,
+                    'status'       => (int)($data['status'] ?? 1),
+                ];
+            })
+            ->filter(fn ($row) => $row['subscriptionType'] > 0) // تجاهل أي عنصر بدون نوع صالح
+            ->values()
+            ->all(),
         ];
 
-        foreach ($validTypes as $typeId => $data) {
-            $payload['subscriptionValues'][] = [
-                'subscriptionType' => (int) $typeId,
-                'value' => (float) $data['value'],
-                'isPercentage' => (bool) $data['is_percentage'],
-                'duration' => (int) $data['duration'],
-                'status' => 0, // أو 1 حسب نظامك
+        try {
+            $response = Http::withBasicAuth($apiUser, $apiPass)
+                ->acceptJson()
+                ->asJson()
+                ->timeout(10)
+                ->retry(2, 200)
+                ->post(rtrim($apiBaseUrl, '/') . '/' . ltrim($apiEndpoint, '/'), $payload);
+
+            if ($response->successful()) {
+                // (اختياري) تسجيل نجاح
+                Log::info('Subscriptions API success', [
+                    'status' => $response->status(),
+                    'api_response' => $response->json(),
+                ]);
+
+                return [
+                    'success'  => true,
+                    'message'  => 'تم إرسال الاشتراك إلى الـ API بنجاح.',
+                    'response' => $response->json(),
+                    'payload'  => $payload, // مفيد للتتبّع/الديبج
+                ];
+            }
+
+            // (اختياري) تسجيل خطأ
+            Log::error('Subscriptions API error', [
+                'status'  => $response->status(),
+                'error'   => $response->body(),
+                'payload' => $payload,
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'فشل إرسال الاشتراك إلى الـ API.',
+                'status'  => $response->status(),
+                'error'   => $response->body(),
+                'payload' => $payload,
+            ];
+        } catch (\Throwable $th) {
+            Log::error('Subscriptions API exception: ' . $th->getMessage(), ['payload' => $payload]);
+
+            return [
+                'success' => false,
+                'message' => 'استثناء أثناء الاتصال بالـ API.',
+                'status'  => 0,
+                'error'   => $th->getMessage(),
+                'payload' => $payload,
             ];
         }
-
-        $response = Http::withHeaders([
-            'accept' => 'application/json',
-            'Authorization' => 'Basic ' . base64_encode('admin:admin'),
-            'Content-Type' => 'application/json',
-        ])->post('http://192.168.81.17:6060/admin/Subscriptions', $payload);
-
-        if ($response->successful()) {
-        return [
-            'success' => true,
-            'message' => 'تم إرسال الاشتراك إلى الـ API بنجاح.',
-            'response' => $response->json(),
-        ];
-    } else {
-        return [
-            'success' => false,
-            'message' => 'فشل إرسال الاشتراك إلى الـ API.',
-            'status' => $response->status(),
-            'error' => $response->body(),
-        ];
     }
-}
 
 
 

@@ -19,6 +19,7 @@ class Institucion extends Model
         'subscriptions_id',
         'insurance_agent_id',
         'status',
+         'code',   // <== الترميز
         'license_number',
         'commercial_record',
     ];
@@ -41,6 +42,9 @@ class Institucion extends Model
     return $this->belongsTo(insuranceAgents::class, 'insurance_agent_id');
 }
 
-
+ public function customer()
+    {
+        return $this->hasOne(Customer::class, 'institucion_sheet_row_id');
+    }
 
 }

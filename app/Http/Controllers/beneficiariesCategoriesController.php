@@ -3,9 +3,10 @@
 namespace App\Http\Controllers;
 use App\Models\beneficiariesCategories;   
 use Illuminate\Validation\Rule; 
-
-
+ use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
+
+
 
 class beneficiariesCategoriesController extends Controller
 {
@@ -36,12 +37,39 @@ class beneficiariesCategoriesController extends Controller
         ], [
             'code.regex' => 'الكود يجب أن يكون أرقامًا فقط حتى 5 خانات.',
         ]);
+             $result = $this->postWorkCategoryToApi($request->name, 1);
+
 
         beneficiariesCategories::create($data);
 
         return redirect()
             ->route('beneficiariescategory.index')
             ->with('success', 'تم إضافة الفئة بنجاح.');
+    }
+
+
+
+     public function postWorkCategoryToApi($name, $status = 0)
+    {
+        $response = Http::withHeaders([
+            'accept' => 'application/json',
+            'Authorization' => 'Basic ' . base64_encode('admin:admin'),
+            'Content-Type' => 'application/json',
+        ])->post('http://192.168.81.17:6060/admin/WorkCategorys', [
+            'name' => $name,
+            'status' => $status,
+        ]);
+
+        if ($response->successful()) {
+            return $response->json(); // أو true إذا ما تحتاج البيانات
+        }
+
+        // لعرض الخطأ إذا فشل الطلب
+        return [
+            'success' => false,
+            'status' => $response->status(),
+            'error' => $response->body(),
+        ];
     }
 
     // عرض سجل واحد (اختياري)

@@ -88,6 +88,22 @@
                                 value="{{ old('name') }}" placeholder="أدخل اسم الجهة" required>
                         </div>
 
+
+                        @role('insurance-manager|admin')
+                            <div class="col-md-6">
+                                <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
+                                    الترميز (اختياري)
+                                </label>
+                                <input type="text" name="code" class="form-control"
+                                    style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
+                                    value="{{ old('code') }}" placeholder="مثال: HR-TR-2025">
+                                <div style="color:#6b7280;font-size:13px;margin-top:6px;">
+                                    الحقل غير فريد — قد تتشارك عدة جهات نفس الترميز.
+                                </div>
+                            </div>
+                        @endrole
+
+
                         <div class="col-md-6">
                             <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
                                 الاشتراك <span style="color:#ef4444;">*</span>
@@ -200,7 +216,7 @@
                     <i class="fa-solid fa-circle-check"></i>
                 </button>
 
-            
+
             </div>
         </form>
     </div>

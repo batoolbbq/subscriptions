@@ -37,6 +37,10 @@ public function users()
 
 
 
+public function addedServices()
+{
+    return $this->belongsToMany(AddedServiceService::class, 'added_service_service_insurance_agent');
+}
 
 
 }

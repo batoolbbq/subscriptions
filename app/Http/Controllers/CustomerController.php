@@ -609,6 +609,9 @@ class CustomerController extends Controller
         }
     }
 
+      $bloodtype = Bloodtype::orderBy('name', 'ASC')->get();
+      $city = City::orderBy('name', 'ASC')->get();
+
     // =========================
     // C) رجوع لنفس الصفحة مع النتائج في الـsession
     // =========================
@@ -626,6 +629,8 @@ class CustomerController extends Controller
         'pension_no'     => $sheetMatch?->pension_no,
         'account_no'     => $sheetMatch?->account_no,
         'total_pension'  => $sheetMatch?->total_pension,
+       
+
    ]);
 
     }    
@@ -633,7 +638,9 @@ class CustomerController extends Controller
     public function test2()
     {
 
-        return view('customers.register_step2');
+         $bloodtype = Bloodtype::orderBy('name', 'ASC')->get();
+         $city = City::orderBy('name', 'ASC')->get();
+        return view('customers.register_step2',compact('bloodtype','city'));
     }
 
   public function lookup(Request $request)

@@ -114,6 +114,8 @@ public function store(Request $request)
 
         'license_number'     => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
         'commercial_record'  => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+         'code'               => ['nullable','string','max:50'], 
+
 
         // ✅ جديد: فالديشن لملف الإكسل
         'excel_sheet'        => ['nullable', 'file', 'mimes:xlsx,xls,csv', 'max:51200'],
@@ -142,6 +144,16 @@ public function store(Request $request)
         $name = time().'_record_'.$f->getClientOriginalName();
         $f->move($uploadPath, $name);
         $data['commercial_record'] = 'institucions_files/'.$name;
+    }
+
+        // وكيل: لا ترميز ولا تفعيل
+    if ($user->hasRole('Wakeel')) {
+        unset($validated['code']);
+        $validated['status'] = 0; // غير مفعّل
+    } else if ($user->hasRole('insurance-manager') || $user->hasRole('admin')) {
+        // الشؤون/الأدمن: مفعّل مباشرة
+        $validated['status'] = 1;
+        // code اختياري — لو تركه فاضي عادي؛ لأن التفعيل تم الآن
     }
 
     // إنشاء الجهة
@@ -340,6 +352,11 @@ public function toggleStatus(\App\Models\Institucion $institucion, \Illuminate\H
                 ->with('similar_conflicts', $conflicts);
         }
     }
+        // لو جاني code من SweetAlert والجهة ما عندهاش ترميز، خزّنه
+        if (!$institucion->code && $request->filled('code')) {
+            $institucion->code = $request->input('code');
+        }
+
 
     // لو وصلنا هنا: يا إما مافيش تشابه، أو العملية هي "إيقاف"، أو فيه force=1
     $institucion->status = $institucion->status ? 0 : 1;

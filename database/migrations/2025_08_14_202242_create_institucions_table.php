@@ -18,6 +18,8 @@ return new class extends Migration
         $table->string('name');
 
         $table->string('commercial_number')->nullable()->unique();
+        $table->string('code', 50)->nullable()->after('name');
+
 
         $table->unsignedBigInteger('work_categories_id');
         $table->unsignedBigInteger('subscriptions_id');
@@ -42,5 +44,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('institucions');
+                $table->dropColumn('code');
+
     }
 };

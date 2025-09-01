@@ -24,9 +24,6 @@ class InstitucionSheetRow extends Model
         'total_pension' => 'decimal:2',
     ];
 
-    public function institucion()
-    {
-        return $this->belongsTo(Institucion::class);
-    }
+   
 }
 
