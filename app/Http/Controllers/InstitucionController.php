@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
+use App\Models\AddedServiceService;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\InstitucionSheetImport;
 use Normalizer;   // <<< أضف هذا السطر
@@ -280,10 +281,11 @@ public function store(Request $request)
         return redirect()->route('institucions.index')
             ->with('success', 'تم حذف جهة العمل بنجاح');
     }
-
-
 public function toggleStatus(\App\Models\Institucion $institucion, \Illuminate\Http\Request $request)
 {
+    // 👈 إضافة: نحدد هل العملية تفعيل (كانت 0 وستصير 1) قبل أي تغيير
+    $wasInactive = ((int) $institucion->status === 0);
+
     // لو الجهة موقوفة (status=0) ونحن "بنفعّل" → نفحص التشابه
     if (!$request->boolean('force') && (int)$institucion->status === 0) {
 
@@ -352,21 +354,52 @@ public function toggleStatus(\App\Models\Institucion $institucion, \Illuminate\H
                 ->with('similar_conflicts', $conflicts);
         }
     }
-        // لو جاني code من SweetAlert والجهة ما عندهاش ترميز، خزّنه
-        if (!$institucion->code && $request->filled('code')) {
-            $institucion->code = $request->input('code');
-        }
 
+    // لو جاني code من SweetAlert والجهة ما عندهاش ترميز، خزّنه
+    if (!$institucion->code && $request->filled('code')) {
+        $institucion->code = $request->input('code');
+    }
 
     // لو وصلنا هنا: يا إما مافيش تشابه، أو العملية هي "إيقاف"، أو فيه force=1
     $institucion->status = $institucion->status ? 0 : 1;
     $institucion->save();
+
+    // 👇👇 إضافة مطلوبة: لو العملية كانت تفعيل بالفعل → نسجّل ServiceLog باسم الشخص المرتبط بالوكيل
+    if ($wasInactive && (int) $institucion->status === 1) {
+
+        // نجيب تعريف خدمة "تسجيل جهة عمل" (لو مش موجودة نكتفي بالتجاهل بدون إنشاء)
+        $service = \App\Models\AddedServiceService::where('name', 'تسجيل جهة عمل')
+                    ->orWhere('name', 'إضافة جهة عمل')
+                    ->orWhere('name', 'اضافة جهة عمل')
+                    ->first();
+
+        if ($service) {
+            // نجيب الوكيل المرتبط بالجهة ثم المستخدمين المرتبطين به عبر جدول pivot
+            $agent = $institucion->insuranceAgent()->with('users')->first(); // تتطلب علاقة insuranceAgent() في موديل Institucion
+
+            // نختار أول مستخدم مرتبط (تقدري تغيري المنطق لاحقًا)
+            $userId = optional(optional($agent)->users->first())->id;
+
+            if ($userId) {
+                \App\Models\ServiceLog::create([
+                    'user_id'        => $userId,
+                    'customer_id'    => null,
+                    'institucion_id' => $institucion->id,
+                    'service_id'     => $service->id,
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ]);
+            }
+        }
+    }
+    // 👆👆 نهاية الإضافة
 
     // مسح أي رسائل تشابه قديمة من الجلسة (علشان ما تعلّق في الصفحة)
     session()->forget(['similar_warning', 'similar_conflicts']);
 
     return back()->with('success', $institucion->status ? 'تم تفعيل الجهة' : 'تم إيقاف الجهة');
 }
+
 
 
     /**

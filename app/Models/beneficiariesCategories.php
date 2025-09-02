@@ -15,4 +15,9 @@ class beneficiariesCategories extends Model
     {
         return $this->hasMany(beneficiariesSupCategories::class, 'beneficiaries_categories_id');
     }
+
+      public function customer()
+    {
+        return $this->hasMany(Customer::class, 'beneficiaries_categories_id');
+    }
 }

@@ -9,6 +9,8 @@ use App\Http\Controllers\InsuranceAgentsController;
 use App\Http\Controllers\beneficiarieSupCategoryController;
 use App\Http\Controllers\beneficiariesCategoriesController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\insuranceperformance;
+
 use App\Http\Controllers\MunicipalController;
 use Illuminate\Support\Facades\Validator;
 
@@ -34,6 +36,25 @@ Route::get('/', function () {
     Route::get('/RegisterView', [App\Http\Controllers\CustomerController::class, 'registerCustomerByAdmin2'])->name('register-customerr');
         Route::get('/customers/register/step2', [App\Http\Controllers\CustomerController::class, 'test2'])->name('customers.register.step2');
 
+    Route::get('/agents/performance', [App\Http\Controllers\insuranceperformance::class, 'insuranceData'])
+    ->name('agents.performance.index');
+
+   Route::get('/agents/{agent}/services/customers', [App\Http\Controllers\insuranceperformance::class, 'servicesCustomers'])
+    ->name('agents.services.customers');
+
+
+    Route::get('/agents/{agent}/services/institutions',[App\Http\Controllers\insuranceperformance::class, 'servicesInstitutions'])
+    ->name('agents.services.institutions');
+     
+    // Route::get('/agents/performance/logs', [insuranceperformance::class, 'logs'])
+    //     ->name('agents.performance.logs');
+
+
+    Route::get('/banks/{bank}/branches', function($bankId) {
+    return \App\Models\BankBranch::where('bank_id', $bankId)->distinct('name')->get(['id','name']);
+    })->name('banks.branches');
+
+    Route::post('/customers/register/step3', [App\Http\Controllers\CustomerController::class, 'test44'])->name('customers.register.step3');
 
     Route::post('/CheckCustomer', [App\Http\Controllers\CustomerController::class, 'test'])->name('check-customer');
     // Route::post('/StoreCustomer', [App\Http\Controllers\CustomerController::class, 'saveCustomersByAdmin'])->name('store-customer');

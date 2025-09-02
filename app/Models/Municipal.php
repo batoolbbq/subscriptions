@@ -13,11 +13,10 @@ class Municipal extends Model
      'name'
     ];
 
-       public function cities() {
-        return $this->belongsTo(City::class);
+ 
 
-    }
-    public function customer() {
-        return $this->hasMany(Customer::class);
-    }
+   public function customer()
+{
+    return $this->hasMany(Customer::class, 'municipals_id');   
+}
 }

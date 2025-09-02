@@ -19,9 +19,12 @@ class City extends Model
         return $this->hasMany(Municipal::class);
     }
   
-    public function customer() {
-        return $this->hasMany(Customer::class);
-    }
+      public function customer()
+{
+    return $this->hasMany(Customer::class, 'cities_id'); // <- هذا اسم العمود الصحيح في ج
+}
+
+    
    
     
 }

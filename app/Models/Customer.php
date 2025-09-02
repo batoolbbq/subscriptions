@@ -100,7 +100,7 @@ class Customer extends Model
     {
         return $this->belongsTo(BankBranch::class, 'bank_branch_id');
     }
-
    
+
     
 }

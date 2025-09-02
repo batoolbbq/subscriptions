@@ -9,4 +9,10 @@ class WorkCategory extends Model
 {
     use HasFactory;
         protected $fillable = ['name', 'status'];
+
+
+          public function institucion()
+    {
+        return $this->hasmany(Institucion::class, 'work_categories_id');
+    }
 }

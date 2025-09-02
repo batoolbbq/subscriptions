@@ -9,11 +9,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('added_service_services', function (Blueprint $table) {
-            $table->id();
+            $table->id(); // BIGINT UNSIGNED PRIMARY KEY
             $table->string('name');
             $table->text('description')->nullable();
-            $table->decimal('price', 10, 2)->default(0);
-            $table->boolean('status')->default(1);
+            $table->decimal('price', 10, 2)->default(0.00);
+            $table->tinyInteger('status')->default(1);
             $table->timestamps();
         });
     }

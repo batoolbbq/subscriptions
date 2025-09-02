@@ -76,6 +76,13 @@
                                     class="right-nav-text">{{ __('  تسجيل مشترك ') }}</span> </a>
                         </li>
 
+                         <li>
+                            <a href="{{ route('agents.performance.index') }}"><i class="fa fa-users"></i><span
+                                    class="right-nav-text">{{ __('معدل اداء الوكلاء') }}</span> </a>
+                        </li>
+
+
+
                     <!-- الاقسام -->
 
                     <!-- 'record-damage -->

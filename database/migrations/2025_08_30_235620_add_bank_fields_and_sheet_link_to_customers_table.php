@@ -29,7 +29,7 @@ public function down(): void
         $table->dropForeign(['bank_id']);
         $table->dropForeign(['bank_branch_id']);
         $table->dropIndex(['bank_id', 'bank_branch_id']);
-        $table->dropColumn(['bank_id', 'bank_branch_id', 'institucion_sheet_row_id']);
+        $table->dropColumn(['bank_id', 'bank_branch_id']);
     });
 }
 };
