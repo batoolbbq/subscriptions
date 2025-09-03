@@ -77,14 +77,32 @@ class Customer extends Model
     {
         return $this->belongsTo(Personalphotos::class);
     }
+
+
     public function beneficiaries_sup_categories_id()
     {
         return $this->belongsTo(beneficiariesSupCategories::class , 'beneficiaries_sup_categories_id' , 'id');
     }
+
     public function beneficiaries_categories_id()
     {
         return $this->belongsTo(beneficiariesCategories::class , 'beneficiaries_categories_id' , 'id');
     }
+
+
+    public function beneficiariesCategoryRelation()
+    {
+    return $this->belongsTo(\App\Models\beneficiariesCategories::class, 'beneficiaries_categories_id', 'id')
+                ->withDefault();
+    }
+
+    public function beneficiariesSupCategoryRelation()
+    {
+    return $this->belongsTo(\App\Models\beneficiariesSupCategories::class, 'beneficiaries_sup_categories_id', 'id')
+                ->withDefault();
+    }
+
+
     
     public function martyrs_wounded()
     {
@@ -101,6 +119,10 @@ class Customer extends Model
         return $this->belongsTo(BankBranch::class, 'bank_branch_id');
     }
    
+    public function institucion()
+    {
+        return $this->belongsTo(\App\Models\Institucion::class, 'institucion_id');
+    }
 
     
 }

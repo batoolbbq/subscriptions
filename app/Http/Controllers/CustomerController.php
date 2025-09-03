@@ -2262,125 +2262,76 @@ class CustomerController extends Controller
 
 
 
- public function searchForm()
+
+    public function searchForm()
 {
     return view('customers.search');
 }
 
-public function search(\Illuminate\Http\Request $request)
+public function searchByNationalId(\Illuminate\Http\Request $request)
 {
-    // أخد أول حقل مدخَل (واحد فقط)
-    $nationalId  = trim((string) $request->input('national_id'));
-    $phoneInput  = trim((string) $request->input('phone'));
-    $insNo       = trim((string) $request->input('insurance_no'));
-
-    if ($nationalId === '' && $phoneInput === '' && $insNo === '') {
-        return back()->withErrors(['msg' => 'الرجاء إدخال الرقم الوطني أو الهاتف أو الرقم التأميني'])->withInput();
-    }
-
-    // أسماء أعمدة بديلة محتملة في جدول customers
-    $nidCols = ['nationalID', 'nationalID', 'nid'];
-    $insCols = ['regnumber', 'insurance_number', 'insuranceID', 'ins_no'];
-
-    // طبّع الهاتف (09XXXXXXXX)
-    $phone = null;
-    if ($phoneInput !== '') {
-        $digits = preg_replace('/\D+/', '', $phoneInput);   // أرقام فقط
-        if (strpos($digits, '218') === 0) {                 // يبدأ بـ 218
-            $digits = ltrim(substr($digits, 3), '0');       // شيل 218 و صفر إن وجد
-            $digits = '0' . $digits;
-        } elseif (strlen($digits) === 9 && $digits[0] !== '0') {
-            $digits = '0' . $digits;
-        }
-        $phone = $digits;
-    }
-
-    $query = \App\Models\Customer::query();
-
-    // نحدّد معيار واحد فقط بناءً على أول حقل مليان
-    if ($nationalId !== '') {
-        $query->where(function($q) use ($nationalId, $nidCols) {
-            foreach ($nidCols as $c) $q->orWhere($c, $nationalId);
-        });
-    } elseif ($phone !== null && $phone !== '') {
-        $query->where(function($q) use ($phone) {
-            $q->orWhere('phone',  $phone)
-              ->orWhere('mobile', $phone);
-        });
-    } else { // الرقم التأميني
-        $query->where(function($q) use ($insNo, $insCols) {
-            foreach ($insCols as $c) $q->orWhere($c, $insNo);
-        });
-    }
-
-    // لو عندك soft deletes و ممكن يكون مشطوب مؤقتًا:
-    // $query->withTrashed();
-
-    // (اختياري) لو فيه عمود status=1 للمفعّل فقط
-    // $query->where('status', 1);
-
-    // سجل الاستعلام للتشخيص لو احتجت تتأكد
-    \Log::info('[Customer Search] SQL', ['sql' => $query->toSql(), 'bindings' => $query->getBindings()]);
-
-    $customer = $query->first();
-
-    // محاولة ثانية خفيفة بالـ LIKE لو ما لقيش نتيجة (أحيانا مسافات/رموز)
-    if (!$customer) {
-        if ($nationalId !== '') {
-            $fallback = \App\Models\Customer::query()
-                ->where(function($q) use ($nationalId, $nidCols) {
-                    foreach ($nidCols as $c) $q->orWhere($c, 'like', "%$nationalId%");
-                })->first();
-            if ($fallback) $customer = $fallback;
-        } elseif ($phone) {
-            $fallback = \App\Models\Customer::query()
-                ->where(function($q) use ($phone) {
-                    $q->orWhere('phone', 'like', "%$phone%")
-                      ->orWhere('mobile','like', "%$phone%");
-                })->first();
-            if ($fallback) $customer = $fallback;
-        } else {
-            $fallback = \App\Models\Customer::query()
-                ->where(function($q) use ($insNo, $insCols) {
-                    foreach ($insCols as $c) $q->orWhere($c, 'like', "%$insNo%");
-                })->first();
-            if ($fallback) $customer = $fallback;
-        }
-    }
-
-    if (!$customer) {
-        return back()->with('error', 'لم يتم العثور على مشترك بهذه البيانات')->withInput();
-    }
-
-    // تجهيز داتا للعرض
-    $name = $customer->name
-         ?? $customer->full_name
-         ?? $customer->name_ar
-         ?? trim(implode(' ', array_filter([
-                $customer->first_name ?? null,
-                $customer->father_name ?? null,
-                $customer->grand_name ?? null,
-                $customer->family_name ?? null,
-            ]))) ?: '-';
-
-    $nidValue = '-';
-    foreach ($nidCols as $c) if (!empty($customer->{$c})) { $nidValue = $customer->{$c}; break; }
-
-    $insValue = '-';
-    foreach ($insCols as $c) if (!empty($customer->{$c})) { $insValue = $customer->{$c}; break; }
-
-    $dob = $customer->birth_date ?? $customer->dob ?? $customer->birthdate ?? '-';
-
-    $basic = [
-        'name'         => $name,
-        'nationalID'  => $nidValue,
-        'regnumber' => $insValue,
-        'phone'        => $customer->phone ?? $customer->mobile ?? ($phone ?? '-'),
-        'birth_date'   => $dob,
-    ];
-
-    return view('customers.result', compact('customer', 'basic'));
+    $v = $request->validate([
+        'nationalID' => ['required','digits_between:10,20'],
+    ]);
+    $customer = $this->findCustomerBy(['nationalID' => $v['nationalID']]);
+    return $this->renderSearchResult($customer);
 }
+
+public function searchByRegnumber(\Illuminate\Http\Request $request)
+{
+    $v = $request->validate([
+        'regnumber' => ['required','string','max:50'],
+    ]);
+    $customer = $this->findCustomerBy(['regnumber' => $v['regnumber']]);
+    return $this->renderSearchResult($customer);
+}
+
+public function searchByPhone(\Illuminate\Http\Request $request)
+{
+    $v = $request->validate([
+        'phone' => ['required','string','max:20'],
+    ]);
+    // تنظيف مبسط للهاتف
+    $phone = preg_replace('/\s+/', '', $v['phone']);
+    $phone = ltrim($phone, '+');
+    $customer = $this->findCustomerBy(['phone' => $phone]);
+    return $this->renderSearchResult($customer);
+}
+
+protected function eagerWith(): array
+{
+    return [
+        'beneficiariesCategoryRelation',
+        'beneficiariesSupCategoryRelation',
+        'socialstatuses',
+        'bloodtypes',
+        'municipals',
+        'cities',
+        'institucion',
+        'bank',
+        'bankBranch',
+    ];
+}
+
+
+protected function findCustomerBy(array $where): ?\App\Models\Customer
+{
+    return \App\Models\Customer::with($this->eagerWith())
+        ->where(key($where), current($where))
+        ->first();
+}
+
+protected function renderSearchResult($customer)
+{
+    if (!$customer) {
+        return back()->with('notfound', 'لم يتم العثور على مشترك بهذه البيانات.')
+                     ->withInput();
+    }
+    return view('customers.search', compact('customer'));
+}
+
+
+
 
 
 

@@ -10,7 +10,7 @@ use App\Http\Controllers\beneficiarieSupCategoryController;
 use App\Http\Controllers\beneficiariesCategoriesController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\insuranceperformance;
-
+use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\MunicipalController;
 use Illuminate\Support\Facades\Validator;
 
@@ -33,20 +33,26 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+        // صفحة البحث (تعرض الثلاثة نماذج)
+        Route::get('/customers/search', [CustomerController::class, 'searchForm'])
+            ->name('customers.search.form');
 
-   // عرض صفحة البحث (GET)
-    Route::get('/searchcustomer', [App\Http\Controllers\CustomerController::class, 'searchForm'])
-        ->name('customers.search.form');
+        // بحث بالرقم الوطني
+        Route::post('/customers/search/nid', [CustomerController::class, 'searchByNationalId'])
+            ->name('customers.search.nid');
 
-    // تنفيذ البحث (POST)
-    Route::post('/searchcustomer', [App\Http\Controllers\CustomerController::class, 'search'])
-        ->name('customers.search');
+        // بحث برقم القيد (الرقم التأميني)
+        Route::get('/customers/search/reg', [App\Http\Controllers\CustomerController::class, 'searchByRegnumber']);
+        Route::post('/customers/search/reg', [App\Http\Controllers\CustomerController::class, 'searchByRegnumber'])->name('customers.search.reg');
 
+
+        // بحث برقم الهاتف
+        Route::post('/customers/search/phone', [CustomerController::class, 'searchByPhone'])
+            ->name('customers.search.phone');
 
         Route::get('/customers/{customer}', [App\Http\Controllers\CustomerController::class, 'show'])->name('customers.show');
 
 
-// routes/web.php
         Route::get('/customers/{customer}/print-all', [App\Http\Controllers\CustomerController::class, 'printAll'])
         ->name('customers.printAll');
 

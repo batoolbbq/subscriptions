@@ -48,6 +48,10 @@ class Institucion extends Model
     }
 
     
+public function customers()
+{
+    return $this->hasMany(\App\Models\Customer::class, 'institucion_id');
+}
 
 
 }
