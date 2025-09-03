@@ -45,11 +45,11 @@
                         <div style="font-weight:800;color:var(--ink);">📞 {{ $agent->phone_number ?? '—' }}</div>
                     </div>
                 </div>
-                <a href="{{ route('agents.performance.index', ['phone' => $agent->phone_number]) }}"
+                {{-- <a href="{{ route('agents.performance.index', ['phone' => $agent->phone_number]) }}"
                     style="display:inline-flex;align-items:center;gap:6px;background:#EEF2FF;color:#1D4ED8;
                 border:1.5px solid #C7D2FE;border-radius:999px;padding:8px 14px;font-weight:800;text-decoration:none;">
                     ⬅️ رجوع لصفحة الوكيل
-                </a>
+                </a> --}}
             </div>
         </div>
 

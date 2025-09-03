@@ -33,6 +33,24 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+
+   // عرض صفحة البحث (GET)
+    Route::get('/searchcustomer', [App\Http\Controllers\CustomerController::class, 'searchForm'])
+        ->name('customers.search.form');
+
+    // تنفيذ البحث (POST)
+    Route::post('/searchcustomer', [App\Http\Controllers\CustomerController::class, 'search'])
+        ->name('customers.search');
+
+
+        Route::get('/customers/{customer}', [App\Http\Controllers\CustomerController::class, 'show'])->name('customers.show');
+
+
+// routes/web.php
+        Route::get('/customers/{customer}/print-all', [App\Http\Controllers\CustomerController::class, 'printAll'])
+        ->name('customers.printAll');
+
+
     Route::get('/RegisterView', [App\Http\Controllers\CustomerController::class, 'registerCustomerByAdmin2'])->name('register-customerr');
         Route::get('/customers/register/step2', [App\Http\Controllers\CustomerController::class, 'test2'])->name('customers.register.step2');
 
@@ -45,6 +63,11 @@ Route::get('/', function () {
 
     Route::get('/agents/{agent}/services/institutions',[App\Http\Controllers\insuranceperformance::class, 'servicesInstitutions'])
     ->name('agents.services.institutions');
+
+    // // routes/web.php
+    // Route::get('/agents/performance/search', [App\Http\Controllers\insuranceperformance::class, 'searchForm'])
+    // ->name('agents.performance.search');
+
      
     // Route::get('/agents/performance/logs', [insuranceperformance::class, 'logs'])
     //     ->name('agents.performance.logs');

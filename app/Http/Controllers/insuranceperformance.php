@@ -20,7 +20,7 @@ class insuranceperformance extends Controller
 
         public function insuranceData(Request $request)
        {
-        $phone = trim((string) $request->get('phone', '')); // ✅ نقرأ ونمرّر $phone
+       $phone = trim((string) $request->get('phone', ''));
         $agent = null;
         $totalServices = 0;
 

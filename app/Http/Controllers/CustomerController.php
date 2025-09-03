@@ -698,6 +698,7 @@ class CustomerController extends Controller
             // الفئة الأساسية
             $benefCatId = 1;
             $cityCode   = 1;
+            $customerId = null;
 
             try {
                 DB::transaction(function () use ($request, $benefCatId, $cityCode) {
@@ -758,6 +759,7 @@ class CustomerController extends Controller
                     $customer->bank_branch_id = $main['bank_branch_id'] ?? null;
                     $customer->iban           = $main['iban']           ?? null;
                     $customer->save();
+                    $customerId = $customer->id;
 
                     // ===== 2) المشتركين الفرعيين =====
                     if ($request->has('dependents')) {
@@ -812,8 +814,9 @@ class CustomerController extends Controller
                     }
                 });
 
+
                 Alert::success("تمت عملية التسجيل بنجاح");
-                return redirect('home')
+                return redirect()->route('customers.show',$customerId)
                     ->with('success', 'تم تسجيل المشترك والمشتركين الفرعيين')
                     ->with('message', 'تم تسجيل المشترك والمشتركين الفرعيين');
             } catch (\Exception $e) {
@@ -2226,7 +2229,7 @@ class CustomerController extends Controller
                 return redirect(route('complete'));
             }
         } else {
-            return redirect(route('/'));
+            return redirect(route('customer'));
         }
     }
 
@@ -2256,6 +2259,184 @@ class CustomerController extends Controller
             return redirect(route('/'));
         }
     }
+
+
+
+ public function searchForm()
+{
+    return view('customers.search');
+}
+
+public function search(\Illuminate\Http\Request $request)
+{
+    // أخد أول حقل مدخَل (واحد فقط)
+    $nationalId  = trim((string) $request->input('national_id'));
+    $phoneInput  = trim((string) $request->input('phone'));
+    $insNo       = trim((string) $request->input('insurance_no'));
+
+    if ($nationalId === '' && $phoneInput === '' && $insNo === '') {
+        return back()->withErrors(['msg' => 'الرجاء إدخال الرقم الوطني أو الهاتف أو الرقم التأميني'])->withInput();
+    }
+
+    // أسماء أعمدة بديلة محتملة في جدول customers
+    $nidCols = ['nationalID', 'nationalID', 'nid'];
+    $insCols = ['regnumber', 'insurance_number', 'insuranceID', 'ins_no'];
+
+    // طبّع الهاتف (09XXXXXXXX)
+    $phone = null;
+    if ($phoneInput !== '') {
+        $digits = preg_replace('/\D+/', '', $phoneInput);   // أرقام فقط
+        if (strpos($digits, '218') === 0) {                 // يبدأ بـ 218
+            $digits = ltrim(substr($digits, 3), '0');       // شيل 218 و صفر إن وجد
+            $digits = '0' . $digits;
+        } elseif (strlen($digits) === 9 && $digits[0] !== '0') {
+            $digits = '0' . $digits;
+        }
+        $phone = $digits;
+    }
+
+    $query = \App\Models\Customer::query();
+
+    // نحدّد معيار واحد فقط بناءً على أول حقل مليان
+    if ($nationalId !== '') {
+        $query->where(function($q) use ($nationalId, $nidCols) {
+            foreach ($nidCols as $c) $q->orWhere($c, $nationalId);
+        });
+    } elseif ($phone !== null && $phone !== '') {
+        $query->where(function($q) use ($phone) {
+            $q->orWhere('phone',  $phone)
+              ->orWhere('mobile', $phone);
+        });
+    } else { // الرقم التأميني
+        $query->where(function($q) use ($insNo, $insCols) {
+            foreach ($insCols as $c) $q->orWhere($c, $insNo);
+        });
+    }
+
+    // لو عندك soft deletes و ممكن يكون مشطوب مؤقتًا:
+    // $query->withTrashed();
+
+    // (اختياري) لو فيه عمود status=1 للمفعّل فقط
+    // $query->where('status', 1);
+
+    // سجل الاستعلام للتشخيص لو احتجت تتأكد
+    \Log::info('[Customer Search] SQL', ['sql' => $query->toSql(), 'bindings' => $query->getBindings()]);
+
+    $customer = $query->first();
+
+    // محاولة ثانية خفيفة بالـ LIKE لو ما لقيش نتيجة (أحيانا مسافات/رموز)
+    if (!$customer) {
+        if ($nationalId !== '') {
+            $fallback = \App\Models\Customer::query()
+                ->where(function($q) use ($nationalId, $nidCols) {
+                    foreach ($nidCols as $c) $q->orWhere($c, 'like', "%$nationalId%");
+                })->first();
+            if ($fallback) $customer = $fallback;
+        } elseif ($phone) {
+            $fallback = \App\Models\Customer::query()
+                ->where(function($q) use ($phone) {
+                    $q->orWhere('phone', 'like', "%$phone%")
+                      ->orWhere('mobile','like', "%$phone%");
+                })->first();
+            if ($fallback) $customer = $fallback;
+        } else {
+            $fallback = \App\Models\Customer::query()
+                ->where(function($q) use ($insNo, $insCols) {
+                    foreach ($insCols as $c) $q->orWhere($c, 'like', "%$insNo%");
+                })->first();
+            if ($fallback) $customer = $fallback;
+        }
+    }
+
+    if (!$customer) {
+        return back()->with('error', 'لم يتم العثور على مشترك بهذه البيانات')->withInput();
+    }
+
+    // تجهيز داتا للعرض
+    $name = $customer->name
+         ?? $customer->full_name
+         ?? $customer->name_ar
+         ?? trim(implode(' ', array_filter([
+                $customer->first_name ?? null,
+                $customer->father_name ?? null,
+                $customer->grand_name ?? null,
+                $customer->family_name ?? null,
+            ]))) ?: '-';
+
+    $nidValue = '-';
+    foreach ($nidCols as $c) if (!empty($customer->{$c})) { $nidValue = $customer->{$c}; break; }
+
+    $insValue = '-';
+    foreach ($insCols as $c) if (!empty($customer->{$c})) { $insValue = $customer->{$c}; break; }
+
+    $dob = $customer->birth_date ?? $customer->dob ?? $customer->birthdate ?? '-';
+
+    $basic = [
+        'name'         => $name,
+        'nationalID'  => $nidValue,
+        'regnumber' => $insValue,
+        'phone'        => $customer->phone ?? $customer->mobile ?? ($phone ?? '-'),
+        'birth_date'   => $dob,
+    ];
+
+    return view('customers.result', compact('customer', 'basic'));
+}
+
+
+
+public function show(Customer $customer)
+    {
+        $dependents = Customer::where('registrationnumbers', $customer->registrationnumbers)
+            ->where('id', '!=', $customer->id)
+            ->get();
+
+        return view('customers.show', compact('customer', 'dependents'));
+    }
+
+
+
+
+
+
+
+    public function printAll(Customer $customer)
+    {
+        // نجيبو المشترك الرئيسي + المنتفعين اللي عنده نفس رقم القيد
+        $all = Customer::where('registrationnumbers', $customer->registrationnumbers)->get();
+
+        // نجهز الواجهة كـ HTML
+        $html = view('customers.print-all', compact('all'))->render();
+
+        // إعداد mPDF مع الخط العربي (Tajawal)
+        $mpdf = new Mpdf([
+            'tempDir' => public_path('tmp'),
+            'fontDir' => [
+                public_path('/fonts'),
+            ],
+            'fontdata' => [
+                'tajawal' => [
+                    'R' => 'Tajawal-Normal.ttf',
+                    'B' => 'Tajawal-Bold.ttf',
+                    'useOTL' => 0xFF,
+                    'useKashida' => 75,
+                ]
+            ],
+            'default_font' => 'tajawal'
+        ]);
+
+        $mpdf->autoScriptToLang = true;
+        $mpdf->autoLangToFont   = true;
+
+        // كتابة محتوى البليد
+        $mpdf->WriteHTML($html);
+
+        // عرض مباشرة في المتصفح
+        return $mpdf->Output("customers_group_{$customer->id}.pdf", 'I');
+    }
+
+
+
+
 
 
 
