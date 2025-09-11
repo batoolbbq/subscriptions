@@ -20,12 +20,15 @@
             </div>
 
             <div class="d-flex align-items-center gap-2">
-                <a href="{{ route('institucions.edit', $institucion) }}"
-                    style="padding:8px 16px;border:1.5px solid #FFD8A8;border-radius:999px;background:#FFF5E6;
-                          color:#92400E;font-weight:800;font-size:.9rem;text-decoration:none;
-                          box-shadow:0 8px 18px rgba(0,0,0,.06);">
-                    تعديل
-                </a>
+
+                @if (!$institucion->status)
+                    <a href="{{ route('institucions.edit', $institucion) }}"
+                        style="padding:8px 16px;border:1.5px solid #FFD8A8;border-radius:999px;background:#FFF5E6;
+                  color:#92400E;font-weight:800;font-size:.9rem;text-decoration:none;
+                  box-shadow:0 8px 18px rgba(0,0,0,.06);">
+                        تعديل
+                    </a>
+                @endif
                 <a href="{{ route('institucions.index') }}"
                     style="padding:8px 16px;border:1.5px solid var(--line);border-radius:999px;background:#fff;
                           color:var(--ink);font-weight:800;font-size:.9rem;text-decoration:none;
@@ -112,17 +115,54 @@
             @endcan
         </div>
 
+        <style>
+            .chip-label {
+                color: var(--muted);
+                font-size: .85rem;
+                margin-bottom: 4px
+            }
+
+            .static-like {
+                width: 100%;
+                border: 1.5px solid var(--line);
+                border-radius: 14px;
+                padding: 10px 12px;
+                background: #f9fafb;
+                color: var(--ink);
+                font-weight: 700
+            }
+
+            .static-like.is-empty {
+                color: #9ca3af;
+                font-weight: 500
+            }
+
+            .link-like {
+                display: inline-block;
+                text-decoration: none;
+                font-weight: 800;
+                border: 1.5px solid var(--line);
+                border-radius: 12px;
+                padding: 8px 12px;
+                background: #fff
+            }
+
+            .link-like:hover {
+                box-shadow: 0 6px 16px rgba(0, 0, 0, .08)
+            }
+        </style>
         <div class="row g-4">
             {{-- بطاقة المعلومات الأساسية --}}
             <div class="col-12 col-lg-8">
                 <div
                     style="border:1.5px solid var(--line);border-radius:32px;box-shadow:0 18px 40px rgba(0,0,0,.10);overflow:hidden;height:100%;background:#fff;">
                     <div
-                        style="background:linear-gradient(135deg,#FFF7EE,#FCE8D6);padding:12px 16px;font-weight:800;display:flex;align-items:center;gap:10px;border-radius:32px 32px 0 0;">
-                        <span
+                        style="background:linear-gradient(135deg,#d95b00 0%,#F58220 35%,#FF8F34 70%,#ffb066 100%);
+       color:#fff;padding:12px 16px;font-weight:800;border-radius:32px 32px 0 0;">
+                        {{-- <span
                             style="background:#1d4ed8;color:#fff;padding:4px 12px;border-radius:999px;font-size:.8rem;">بيانات
-                            أساسية</span>
-                        <span style="font-size:.9rem;color:{{ $institucion->status ? '#10734a' : '#374151' }};">
+                            أساسية</span> --}} <span
+                            style="font-size:.9rem;color:{{ $institucion->status ? '#ffff' : '#374151' }};">
                             الحالة:
                             @if ($institucion->status)
                                 <span
@@ -174,16 +214,18 @@
                 <div
                     style="border:1.5px solid var(--line);border-radius:32px;box-shadow:0 18px 40px rgba(0,0,0,.10);overflow:hidden;height:100%;background:#fff;">
                     <div
-                        style="background:linear-gradient(135deg,#FFF7EE,#FCE8D6);padding:12px 16px;font-weight:800;border-radius:32px 32px 0 0;">
+                        style="background:linear-gradient(135deg,#d95b00 0%,#F58220 35%,#FF8F34 70%,#ffb066 100%);
+           color:#fff;padding:12px 16px;font-weight:800;border-radius:32px 32px 0 0;">
                         المستندات
                     </div>
+
                     <div style="padding:16px 18px;">
                         <div style="margin-bottom:12px;">
                             <div style="color:var(--muted);font-size:.85rem;margin-bottom:4px;">ملف الترخيص</div>
                             @if ($institucion->license_number)
                                 <a href="{{ asset($institucion->license_number) }}" target="_blank"
-                                    style="color:#1d4ed8;text-decoration:none;font-weight:700;">
-                                    عرض الملف
+                                    style="color:#9F5547;text-decoration:underline;">
+                                    عرض الملف الحالي
                                 </a>
                             @else
                                 <div style="color:#9ca3af;">لا يوجد ملف ترخيص</div>
@@ -194,13 +236,22 @@
                             <div style="color:var(--muted);font-size:.85rem;margin-bottom:4px;">ملف السجل التجاري</div>
                             @if ($institucion->commercial_record)
                                 <a href="{{ asset($institucion->commercial_record) }}" target="_blank"
-                                    style="color:#1d4ed8;text-decoration:none;font-weight:700;">
-                                    عرض الملف
+                                    style="color:#9F5547;text-decoration:underline;">
+                                    عرض الملف الحالي
                                 </a>
                             @else
-                                <div style="color:#9ca3af;">لا يوجد ملف سجل تجاري</div>
+                                <div style="color:#9F5547;">لا يوجد ملف سجل تجاري</div>
                             @endif
                         </div>
+
+                        <div style="color:var(--muted);font-size:.85rem;margin-bottom:4px;">ملف اكسل شيت </div>
+                        <a href="{{ asset($institucion->excel_path) }}" target="_blank"
+                            style="color:#9F5547;text-decoration:underline;">
+                            عرض ملف الإكسل الحالي
+                        </a>
+
+
+
                     </div>
                 </div>
             </div>

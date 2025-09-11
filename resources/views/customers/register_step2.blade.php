@@ -153,8 +153,10 @@
 
         .btn {
             all: unset;
-            display: inline-block;
-            padding: 0 22px;
+            display: block;
+            /* يخلي الزر ياخذ عرض كامل */
+            width: 100%;
+            /* يمتد عرض الفورم */
             height: 42px;
             line-height: 42px;
             border-radius: 999px;
@@ -164,8 +166,9 @@
             cursor: pointer;
             text-align: center;
             box-shadow: 0 10px 20px rgba(245, 130, 32, .25);
-            transition: transform .15s, background .15s
+            transition: transform .15s, background .15s;
         }
+
 
         .btn.secondary {
             background: #111827;
@@ -223,6 +226,10 @@
                         <input type="hidden" name="main[beneficiaries_categories_id]"
                             value="{{ session('beneficiariesSupCategories') }}">
 
+                            <input type="hidden" name="institutionId"
+                            value="{{ session('institutionId') }}">
+
+
                         <div class="row g-3">
                             <div class="col-md-6 form-group">
                                 <label>الاسم (من الأحوال)</label>
@@ -232,7 +239,6 @@
                                 <input type="hidden" name="main[name_en]" value="{{ $main['name_en'] ?? '' }}">
                                 <input type="hidden" readonly name="main[registry_number44]"
                                     value="{{ session('registryNumber') }}">
-
                                 <input type="hidden" name="main[birthDate]" value="{{ $main['birthDate'] ?? '' }}">
                                 <input type="hidden" name="main[gender]" value="{{ $main['gender'] ?? '' }}">
                             </div>
@@ -245,36 +251,31 @@
 
                         <div class="row g-3 mt-1">
                             <div class="col-md-6 form-group">
-                                <label>اسم الأم</label>
-                                <input type="text" class="form-control" value="{{ $main['mother'] ?? '-' }}"
-                                    readonly>
-                            </div>
-                            <div class="col-md-6 form-group">
                                 <label>تاريخ الميلاد</label>
                                 <input type="text" class="form-control" value="{{ $main['birthDate'] ?? '-' }}"
                                     readonly>
                             </div>
-                        </div>
-
-                        <div class="row g-3 mt-1">
                             <div class="col-md-6 form-group">
                                 <label>الرقم الوطني</label>
                                 <input type="text" class="form-control" value="{{ $main['nationalID'] ?? '-' }}"
                                     readonly>
                             </div>
+                        </div>
+
+                        <div class="row g-3 mt-1">
                             <div class="col-md-6 form-group">
                                 <label>البريد الإلكتروني</label>
                                 <input type="email" class="form-control" name="main[email]"
                                     value="{{ old('main.email') }}" placeholder="example@mail.com">
                             </div>
-                        </div>
-
-                        <div class="row g-3 mt-1">
                             <div class="col-md-6 form-group">
                                 <label>رقم الهاتف</label>
                                 <input type="text" class="form-control" value="{{ session('phone') }}" readonly>
                                 <input type="hidden" name="main[phone]" value="{{ session('phone') }}">
                             </div>
+                        </div>
+
+                        <div class="row g-3 mt-1">
                             <div class="col-md-6 form-group">
                                 <label>فصيلة الدم</label>
                                 <select name="main[bloodtypes_id]" class="form-control" required>
@@ -285,9 +286,6 @@
                                     @endforeach
                                 </select>
                             </div>
-                        </div>
-
-                        <div class="row g-3 mt-1">
                             <div class="col-md-6 form-group">
                                 <label for="city_main">المنطقة الصحية</label>
                                 <select id="city_main" class="form-select city" name="main[cities_id]" required>
@@ -298,6 +296,9 @@
                                     @endforeach
                                 </select>
                             </div>
+                        </div>
+
+                        <div class="row g-3 mt-1">
                             <div class="col-md-6 form-group">
                                 <label for="Municipal_main">البلدية</label>
                                 <select id="Municipal_main" class="form-select municipal" name="main[municipals_id]"
@@ -305,22 +306,19 @@
                                     <option value="">اختر البلدية</option>
                                 </select>
                             </div>
+                            <div class="col-md-6 form-group">
+                                <label>أقرب نقطة بلدية</label>
+                                <input type="text" class="form-control" name="main[nearest_municipal_point22]"
+                                    placeholder="مثال: نقطة بلدية ...">
+                            </div>
                         </div>
 
                         <div class="row g-3 mt-1">
-                            <div class="col-md-6 form-group">
-                                <label>أقرب نقطة بلدية</label>
-                                <input type="text" class="form-control" name="main[nearest_municipal_point]"
-                                    placeholder="مثال: نقطة بلدية ...">
-                            </div>
                             <div class="col-md-6 form-group">
                                 <label>رقم الجواز</label>
                                 <input type="text" class="form-control" name="main[passport_no]"
                                     placeholder="LXXXXXXXX">
                             </div>
-                        </div>
-
-                        <div class="row g-3 mt-1">
                             <div class="col-md-6 form-group">
                                 <label>الحالة الاجتماعية</label>
                                 <select name="main[socialstatuses_id]" class="form-control" required>
@@ -331,31 +329,38 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-6 form-group">
-                                <label>المصرف</label>
-                                <select id="bank_id" name="main[bank_id]" class="form-select" required>
-                                    <option value="">اختر المصرف</option>
-                                    @foreach (\App\Models\Bank::orderBy('name')->get() as $bank)
-                                        <option value="{{ $bank->id }}">{{ $bank->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
                         </div>
 
-                        <div class="row g-3 mt-1">
-                            <div class="col-md-6 form-group">
-                                <label>فرع المصرف</label>
-                                <select id="bank_branch_id" name="main[bank_branch_id]" class="form-select" required
-                                    disabled>
-                                    <option value="">اختر الفرع</option>
-                                </select>
+                        <!-- المصرف وفرع المصرف جنب بعض -->
+
+                        @if (!in_array(session('beneficiariesSupCategories'), [1, 12]))
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-6 form-group">
+                                    <label>المصرف</label>
+                                    <select id="bank_id" name="main[bank_id]" class="form-select" required>
+                                        <option value="">اختر المصرف</option>
+                                        @foreach (\App\Models\Bank::orderBy('name')->get() as $bank)
+                                            <option value="{{ $bank->id }}">{{ $bank->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-6 form-group">
+                                    <label>فرع المصرف</label>
+                                    <select id="bank_branch_id" name="main[bank_branch_id]" class="form-select"
+                                        required disabled>
+                                        <option value="">اختر الفرع</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div class="col-md-6 form-group" id="ibanRow" style="display:none;">
-                                <label for="iban">رقم الحساب الدولي (IBAN)</label>
-                                <input type="text" class="form-control" id="iban" name="main[iban]"
-                                    placeholder="LY3802100100000001234567890">
+
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-12 form-group" id="ibanRow" style="display:none;">
+                                    <label for="iban">رقم الحساب الدولي (IBAN)</label>
+                                    <input type="text" class="form-control" id="iban" name="main[iban]"
+                                        placeholder="LY3802100100000001234567890">
+                                </div>
                             </div>
-                        </div>
+                        @endif
 
                         @if (session('verified_ok') && session('sheetMatch'))
                             <div class="row g-3 mt-1">
@@ -392,8 +397,29 @@
                                 </div>
                             </div>
                         @endif
+
+                        @if (session('beneficiariesSupCategories') == 1)
+                            <div class="row" style="margin-top:15px">
+                                <div>
+                                    <label>رقم المعاش</label>
+                                    <input type="text" name="main[warrantynumber]" placeholder="XXXXXXXXXXX">
+                                </div>
+                                <div>
+                                    <label>مكتب الضمان</label>
+                                    <select name="main[warrantyoffices_id]">
+                                        @foreach ($warrantyOffices as $wo)
+                                            <option value="{{ $wo->id }}">{{ $wo->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                        @endif
+
+
+
                     </div>
                 </div>
+
 
 
                 {{-- بطاقات المشتركين الفرعيين --}}
@@ -402,7 +428,12 @@
                         <div class="card">
                             <div class="card-head">
                                 <span class="icon"><i class="fa-solid fa-user"></i></span>
-                                مشترك فرعي
+                                منتفع
+                                (@if ($d['relationship'] == 2)
+                                    زوجة
+                                @elseif($d['relationship'] == 3)
+                                    ابن / ابنة
+                                @endif)
                             </div>
                             <div class="card-body">
 
@@ -451,27 +482,19 @@
                                             readonly>
                                     </div>
                                     <div class="col-md-6 form-group">
-                                        <label>اسم الأم</label>
-                                        <input type="text" class="form-control" value="{{ $d['mother'] ?? '-' }}"
-                                            readonly>
-                                    </div>
-                                </div>
-
-                                <div class="row g-3 mt-1">
-                                    <div class="col-md-6 form-group">
                                         <label>البريد الإلكتروني</label>
                                         <input type="email" class="form-control"
                                             name="dependents[{{ $i }}][email]"
                                             placeholder="example@mail.com">
                                     </div>
+                                </div>
+
+                                <div class="row g-3 mt-1">
                                     <div class="col-md-6 form-group">
                                         <label>رقم الهاتف</label>
                                         <input type="text" class="form-control"
                                             name="dependents[{{ $i }}][phone]" placeholder="9xxxxxxx">
                                     </div>
-                                </div>
-
-                                <div class="row g-3 mt-1">
                                     <div class="col-md-6 form-group">
                                         <label>فصيلة الدم</label>
                                         <select name="dependents[{{ $i }}][bloodtypes_id]"
@@ -483,6 +506,9 @@
                                             @endforeach
                                         </select>
                                     </div>
+                                </div>
+
+                                <div class="row g-3 mt-1">
                                     <div class="col-md-6 form-group">
                                         <label for="city_dep_{{ $i }}">المنطقة الصحية</label>
                                         <select id="city_dep_{{ $i }}" class="form-select city"
@@ -494,9 +520,6 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                </div>
-
-                                <div class="row g-3 mt-1">
                                     <div class="col-md-6 form-group">
                                         <label for="Municipal_dep_{{ $i }}">البلدية</label>
                                         <select id="Municipal_dep_{{ $i }}" class="form-select municipal"
@@ -504,22 +527,25 @@
                                             <option value="">اختر البلدية</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-6 form-group">
-                                        <label>أقرب نقطة بلدية</label>
-                                        <input type="text" class="form-control"
-                                            name="dependents[{{ $i }}][nearest_municipal_point]"
-                                            placeholder="مثال: نقطة بلدية ...">
-                                    </div>
                                 </div>
 
                                 <div class="row g-3 mt-1">
+                                    <div class="col-md-6 form-group">
+                                        <label>أقرب نقطة بلدية</label>
+                                        <input type="text" class="form-control"
+                                            name="dependents[{{ $i }}][nearest_municipal_point33]"
+                                            placeholder="مثال: نقطة بلدية ...">
+                                    </div>
                                     <div class="col-md-6 form-group">
                                         <label>رقم الجواز</label>
                                         <input type="text" class="form-control"
                                             name="dependents[{{ $i }}][passport_no]"
                                             placeholder="LXXXXXXXX">
                                     </div>
-                                    <div class="col-md-6 form-group">
+                                </div>
+
+                                <div class="row g-3 mt-1">
+                                    <div class="col-md-12 form-group">
                                         <label>الحالة الاجتماعية</label>
                                         <select name="dependents[{{ $i }}][socialstatuses_id]"
                                             class="form-control" required>
@@ -537,7 +563,7 @@
                 @endif
 
                 <div class="actions">
-                    <button type="submit" class="btn">حفظ</button>
+                    <button type="submit" class="btn btn-block ">حفظ</button>
                 </div>
             </form>
         </div>

@@ -100,6 +100,18 @@ public function store(Request $request)
         $request->merge(['insurance_agent_id' => $forcedAgentId]);
     }
 
+
+     // ✅ جديد: تعيين الاشتراك تلقائيًا حسب work_categories_id
+    $wcId = (int) $request->input('work_categories_id');
+    $autoMap = [
+        19 => 10, // 19 أو 21 → 10
+        21 => 11,
+        20 => 10, // 20 → 11
+    ];
+    if (isset($autoMap[$wcId])) {
+        $request->merge(['subscriptions_id' => $autoMap[$wcId]]);
+    }
+
     $agentRule = $user->hasRole('admin')
         ? 'required|exists:insurance_agents,id'
         : 'exists:insurance_agents,id';
@@ -126,10 +138,8 @@ public function store(Request $request)
 
     $data = $validated;
 
-    // حالة الوكيل
     $data['status'] = $user->hasRole('Wakeel') ? 0 : (array_key_exists('status', $data) ? (int)(bool)$data['status'] : 1);
 
-    // رفع الملفات العادية
     $uploadPath = public_path('institucions_files');
     if (!file_exists($uploadPath)) mkdir($uploadPath, 0775, true);
 
@@ -147,20 +157,24 @@ public function store(Request $request)
         $data['commercial_record'] = 'institucions_files/'.$name;
     }
 
+    if ($request->hasFile('excel_sheet')) {
+    $f = $request->file('excel_sheet');
+    $name = time().'_excel_'.$f->getClientOriginalName();
+    $f->move($uploadPath, $name);
+    $data['excel_path'] = 'institucions_files/'.$name;
+}
+
+
         // وكيل: لا ترميز ولا تفعيل
     if ($user->hasRole('Wakeel')) {
         unset($validated['code']);
         $validated['status'] = 0; // غير مفعّل
     } else if ($user->hasRole('insurance-manager') || $user->hasRole('admin')) {
-        // الشؤون/الأدمن: مفعّل مباشرة
         $validated['status'] = 1;
-        // code اختياري — لو تركه فاضي عادي؛ لأن التفعيل تم الآن
     }
 
-    // إنشاء الجهة
     $model = \App\Models\Institucion::create($data);
 
-    // استيراد الإكسل (نفس الترتيب والفالديشن اللي فوق)
     if ($request->hasFile('excel_sheet')) {
         try {
             Excel::import(new InstitucionSheetImport($model->id), $request->file('excel_sheet'));
@@ -241,6 +255,13 @@ public function store(Request $request)
         ]);
 
         $data = $validated;
+
+        $wcId = (int) $request->input('work_categories_id');
+        $autoMap = [
+            19 => 10, // 19 أو 21 → 10
+            21 => 11,
+            20 => 10, // 20 → 11
+        ];
 
         // استبدال الملفات عند الرفع (بدون إجبار – الفيو يحدد متى تظهر)
         if ($request->hasFile('license_number')) {

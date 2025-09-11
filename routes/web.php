@@ -26,6 +26,8 @@ use Illuminate\Support\Facades\Validator;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+    Route::post('/search/customers', [CustomerController::class, 'searchUnified'])
+        ->name('search.customers');
     Route::post('/cra/family', [App\Http\Controllers\CustomerController::class, 'lookup'])->name('cra.lookup2');
 
 
@@ -33,28 +35,36 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-        // صفحة البحث (تعرض الثلاثة نماذج)
-        Route::get('/customers/search', [CustomerController::class, 'searchForm'])
-            ->name('customers.search.form');
-
-        // بحث بالرقم الوطني
-        Route::post('/customers/search/nid', [CustomerController::class, 'searchByNationalId'])
-            ->name('customers.search.nid');
-
-        // بحث برقم القيد (الرقم التأميني)
-        Route::get('/customers/search/reg', [App\Http\Controllers\CustomerController::class, 'searchByRegnumber']);
-        Route::post('/customers/search/reg', [App\Http\Controllers\CustomerController::class, 'searchByRegnumber'])->name('customers.search.reg');
 
 
-        // بحث برقم الهاتف
-        Route::post('/customers/search/phone', [CustomerController::class, 'searchByPhone'])
-            ->name('customers.search.phone');
+Route::get('/customers/lookup', [CustomerController::class, 'showLookupForm'])->name('customers.lookup');
+Route::post('/customers/lookup-do', [CustomerController::class, 'doLookup'])->name('customers.get');
+Route::get('/customers/{customer}/print-card', [CustomerController::class, 'printCard'])->name('customers.print.card');
 
-        Route::get('/customers/{customer}', [App\Http\Controllers\CustomerController::class, 'show'])->name('customers.show');
 
+    Route::get('/customers/search', [CustomerController::class, 'searchForm'])
+        ->name('customers.search.form');
+
+     Route::post('/send-otp', [App\Http\Controllers\CustomerController::class, 'sendOtps'])
+     ->name('customers.send-otp');
+
+
+        Route::get('/customers/searchEditForm', [App\Http\Controllers\CustomerController::class, 'searchEditForm'])->name('customer.searchEditForm');
+        Route::post('/customers/search', [App\Http\Controllers\CustomerController::class, 'searchEdit'])->name('customer.searchEdit');
+        Route::get('/customer/{id}/edit', [App\Http\Controllers\CustomerController::class, 'edit'])->name('customer.edit');
+        Route::put('/customer/{id}', [App\Http\Controllers\CustomerController::class, 'update'])->name('customer.update');
+        Route::get('/customers/{customer}/print-one', [App\Http\Controllers\CustomerController::class, 'printOne'])
+        ->name('customer.print-one');
+
+             Route::get('/customers/{customer}/fakad', [App\Http\Controllers\CustomerController::class, 'fakad'])
+        ->name('customer.fakad');
+
+        Route::get('/customers/show/{id}', [App\Http\Controllers\CustomerController::class, 'show'])->name('customers.show');
 
         Route::get('/customers/{customer}/print-all', [App\Http\Controllers\CustomerController::class, 'printAll'])
-        ->name('customers.printAll');
+         ->name('customers.printAll');
+
+    
 
 
     Route::get('/RegisterView', [App\Http\Controllers\CustomerController::class, 'registerCustomerByAdmin2'])->name('register-customerr');
@@ -166,6 +176,8 @@ Route::post('/insurance-agents/{id}/deactivate', [InsuranceAgentsController::cla
     Route::resource('beneficiaries-sup-categories', beneficiarieSupCategoryController::class);
 
     Route::resource('institucions', \App\Http\Controllers\InstitucionController::class);
+ 
+
 Route::patch('institucions/{institucion}/toggle-status', [\App\Http\Controllers\InstitucionController::class, 'toggleStatus'])
     ->name('institucions.toggle-status');
 });

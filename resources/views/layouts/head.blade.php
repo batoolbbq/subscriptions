@@ -31,5 +31,10 @@
 <!--- Style css -->
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+<!-- Font Awesome 6 -->
+{{-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    integrity="sha512-S+2KJqvZg8o4D3o5A1c3p9pbiJY9Jr6vQ0A7b7vQq1qQxXk2sVb+z8Jp8xwM8j1hH0GQ5m7y9QZyG2FQ3mH0Wg=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" /> --}}
 
-    <link href="{{ URL::asset('assets/css/rtl.css') }}" rel="stylesheet">
+
+<link href="{{ URL::asset('assets/css/rtl.css') }}" rel="stylesheet">

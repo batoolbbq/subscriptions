@@ -2,7 +2,7 @@
 
 @font-face {
     font-family: 'Readx';
-    src: url('../fonts/Tajawal-Bold.ttf');
+    src: url('../fonts/Tajawal-Medium.ttf');
 }
 
 :root {
@@ -28122,6 +28122,7 @@ a.button-toggle-nav i {
     background: transparent;
     color: #84ba3f;
 }
+
 
 .side-menu-fixed.light-side-menu .side-menu li ul li a:focus {
     background: transparent;

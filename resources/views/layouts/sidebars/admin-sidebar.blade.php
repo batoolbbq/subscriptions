@@ -14,6 +14,8 @@
 
 
 
+
+
                     <!-- menu item Dashboard-->
                     @can('dashboard')
                         <li>
@@ -22,64 +24,113 @@
                         </li>
                     @endcan
 
+
+                    <li>
+                        <a href="{{ route('home') }}"><i class="fas fa-home"></i><span
+                                class="right-nav-text">{{ __('الرئيسية') }}</span></a>
+                    </li>
+
+
                     <!-- <li class="mt-10 mb-10 text-muted pl-4 font-medium menu-title"> {{ __('Components') }} </li> -->
+
                     @can('permissions.index')
                         <li>
-                            <a href="{{ route('permissions.index') }}"><i class="ti-calendar"></i><span
-                                    class="right-nav-text">{{ __(' الصلاحيات') }}</span> </a>
+                            <a href="{{ route('permissions.index') }}"><i class="fas fa-key"></i><span
+                                    class="right-nav-text">{{ __(' الصلاحيات') }}</span></a>
                         </li>
                     @endcan
+
                     @can('roles.index')
                         <li>
-                            <a href="{{ route('roles.index') }}"><i class="fa fa-comment"></i><span
-                                    class="right-nav-text">{{ __('  الادوار') }}</span> </a>
+                            <a href="{{ route('roles.index') }}"><i class="fas fa-users-cog"></i><span
+                                    class="right-nav-text">{{ __('  الادوار') }}</span></a>
                         </li>
                     @endcan
+
                     @can('users.index')
                         <li>
-                            <a href="{{ route('users.index') }}"><i class="fa fa-users"></i><span
-                                    class="right-nav-text">{{ __('  المستخدمين') }}</span> </a>
+                            <a href="{{ route('users.index') }}"><i class="fas fa-user-friends"></i><span
+                                    class="right-nav-text">{{ __('  المستخدمين') }}</span></a>
                         </li>
                     @endcan
+
                     @can('insuranceAgents.index')
                         <li>
-                            <a href="{{ route('insuranceAgents.index') }}"><i class="fa fa-users"></i><span
-                                    class="right-nav-text">{{ __('  وكلاء التأمين') }}</span> </a>
+                            <a href="{{ route('insuranceAgents.index') }}"><i class="fas fa-user-shield"></i><span
+                                    class="right-nav-text">{{ __('  وكلاء التأمين') }}</span></a>
                         </li>
                     @endcan
+
                     @can('beneficiariescategory.index')
                         <li>
-                            <a href="{{ route('beneficiariescategory.index') }}"><i class="fa fa-users"></i><span
-                                    class="right-nav-text">{{ __('  الفئات ') }}</span> </a>
+                            <a href="{{ route('beneficiariescategory.index') }}"><i class="fas fa-layer-group"></i><span
+                                    class="right-nav-text">{{ __('  الفئات ') }}</span></a>
                         </li>
                     @endcan
+
                     @can('beneficiaries-sup-categories.index')
                         <li>
-                            <a href="{{ route('beneficiaries-sup-categories.index') }}"><i class="fa fa-users"></i><span
-                                    class="right-nav-text">{{ __('الفئات الفرعية ') }}</span> </a>
+                            <a href="{{ route('beneficiaries-sup-categories.index') }}"><i class="fas fa-sitemap"></i><span
+                                    class="right-nav-text">{{ __('الفئات الفرعية ') }}</span></a>
                         </li>
                     @endcan
+
                     @can('subscriptions.index')
                         <li>
-                            <a href="{{ route('subscriptions.index') }}"><i class="fa fa-users"></i><span
-                                    class="right-nav-text">{{ __('  الاشتراكات ') }}</span> </a>
+                            <a href="{{ route('subscriptions.index') }}"><i class="fas fa-file-invoice-dollar"></i><span
+                                    class="right-nav-text">{{ __('  الاشتراكات ') }}</span></a>
                         </li>
                     @endcan
+
+                    @can('institucions.create')
+                        <li>
+                            <a href="{{ route('institucions.create') }}"><i class="fas fa-building"></i><span
+                                    class="right-nav-text">{{ __(' تسجيل جهة عمل') }}</span></a>
+                        </li>
+                    @endcan
+
+                    <li>
+                        <a href="{{ route('register-customerr') }}"><i class="fas fa-user-plus"></i><span
+                                class="right-nav-text">{{ __('  تسجيل مشترك ') }}</span></a>
+                    </li>
+
                     @can('institucions.index')
                         <li>
-                            <a href="{{ route('institucions.index') }}"><i class="fa fa-users"></i><span
-                                    class="right-nav-text">{{ __(' جهات العمل ') }}</span> </a>
+                            <a href="{{ route('institucions.index') }}"><i class="fas fa-building"></i><span
+                                    class="right-nav-text">{{ __(' جهات العمل ') }}</span></a>
                         </li>
                     @endcan
-                     <li>
-                            <a href="{{ route('register-customerr') }}"><i class="fa fa-users"></i><span
-                                    class="right-nav-text">{{ __('  تسجيل مشترك ') }}</span> </a>
-                        </li>
 
-                         <li>
-                            <a href="{{ route('agents.performance.index') }}"><i class="fa fa-users"></i><span
-                                    class="right-nav-text">{{ __('معدل اداء الوكلاء') }}</span> </a>
+                    @can('agents.performance.index')
+                        <li>
+                            <a href="{{ route('agents.performance.index') }}"><i class="fas fa-chart-line"></i><span
+                                    class="right-nav-text">{{ __('معدل اداء الوكلاء') }}</span></a>
                         </li>
+                    @endcan
+
+                    <li>
+                        <a href="{{ route('customers.search.form') }}"><i class="fas fa-search"></i><span
+                                class="right-nav-text">{{ __('البحث عن مشترك / منتفع') }}</span></a>
+                    </li>
+
+                    <li>
+                        <a href="{{ route('customer.searchEditForm') }}"><i class="fas fa-user-edit"></i><span
+                                class="right-nav-text">{{ __(' تعديل بيانات مشترك/منتفع ') }}</span></a>
+                    </li>
+
+                    <li>
+                        <a href="{{ route('agents.performance.index') }}"><i class="fas fa-exchange-alt"></i><span
+                                class="right-nav-text">{{ __(' التحويل من فئة لي فئة ') }}</span></a>
+                    </li>
+
+
+                      <li>
+                        <a href="{{ route('customers.lookup') }}"><i class="fas fa-exchange-alt"></i><span
+                                class="right-nav-text">{{ __('بدل فاقد ') }}</span></a>
+                    </li>
+
+
+
 
 
 

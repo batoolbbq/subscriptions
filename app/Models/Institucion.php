@@ -15,6 +15,7 @@ class Institucion extends Model
     protected $fillable = [
         'name',
         'commercial_number',
+        'excel_path',
         'work_categories_id',
         'subscriptions_id',
         'insurance_agent_id',

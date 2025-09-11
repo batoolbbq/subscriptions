@@ -103,7 +103,7 @@
                             </div>
                         @endrole
 
-
+                        {{-- 
                         <div class="col-md-6">
                             <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
                                 الاشتراك <span style="color:#ef4444;">*</span>
@@ -119,7 +119,7 @@
                                     </option>
                                 @endforeach
                             </select>
-                        </div>
+                        </div> --}}
 
                         @if ($showAgentSelect)
                             <div class="col-md-6">
@@ -269,7 +269,7 @@
 
                         Swal.fire({
                             title: 'تأكيد الاستيراد',
-                            html: `تم العثور على <b>${count}</b> موظف في شيت الإكسل.<br>هل تريدين إكمال الحفظ؟`,
+                            html: `تم العثور على <b>${count}</b> موظفين في شيت الإكسل.<br>هل تريدين إكمال الحفظ؟`,
                             icon: 'question',
                             showCancelButton: true,
                             confirmButtonText: 'نعم، احفظ',

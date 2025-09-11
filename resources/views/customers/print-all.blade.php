@@ -1,72 +1,70 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
     <title>تقرير المشترك</title>
     <style>
         body {
-            font-family: "tajawal", sans-serif;
-            direction: rtl;
-            background-color: #fff;
-            font-size: 14px;
-            line-height: 1.8;
-        }
-
-        .title {
-            text-align: center;
-            background: linear-gradient(90deg, #ff7b00, #f58220);
-            padding: 10px;
-            border-radius: 12px 12px 0 0;
-            color: #fff;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-
-        .form-card {
-            border: 1.5px solid #eee;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 30px;
-            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
-            padding: 15px;
-        }
-
-        .row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
-
-        .col {
-            width: 48%;
-        }
-
-        label {
-            font-weight: bold;
-            display: block;
-            margin-bottom: 5px;
-            color: #444;
-        }
-
-        .input {
-            display: block;
-            width: 100%;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 6px 10px;
-            background: #f9f9f9;
+            font-family: "Tajawal", sans-serif;
+            background: #fff;
             font-size: 13px;
-            color: #222;
+            line-height: 1.6;
+            margin: 20px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #8C5346;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .section-title {
+            background: linear-gradient(90deg, #f58220, #d95b00);
+            color: #fff;
+            padding: 6px 12px;
+            font-weight: bold;
+            border-radius: 6px;
+            margin: 14px 0 10px 0;
+            font-size: 14px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 14px;
+        }
+
+        th,
+        td {
+            border: 1px solid #E5E7EB;
+            padding: 7px 10px;
+            text-align: right;
+            vertical-align: middle;
+        }
+
+        th {
+            background: #FFF7EE;
+            font-weight: bold;
+            color: #374151;
+            font-size: 13px;
+        }
+
+        td {
+            font-weight: 600;
+            color: #1F2328;
+            font-size: 13px;
         }
 
         .footer {
             text-align: center;
             font-weight: bold;
             color: #e63946;
-            margin-top: 40px;
-            font-size: 15px;
+            margin-top: 25px;
+            font-size: 14px;
             border-top: 1px solid #ddd;
-            padding-top: 10px;
+            padding-top: 8px;
         }
 
         .page-break {
@@ -74,109 +72,91 @@
         }
     </style>
 </head>
+
 <body>
 
-@foreach($all as $customer)
-<div class="form-card">
-    <div class="title">بيانات المشترك / المنتفع</div>
+    @foreach ($all as $customer)
+        <h2>بيانات المشترك / المنتفع</h2>
 
-    <div class="row">
-        <div class="col">
-            <label>الاسم (من الأحوال)</label>
-            <div class="input">{{ $customer->fullnamea }}</div>
-        </div>
-        <div class="col">
-            <label>الاسم (بالإنجليزية)</label>
-            <div class="input">{{ $customer->fullnamee }}</div>
-        </div>
-    </div>
+        <div class="section-title">البيانات الأساسية</div>
+        <table>
+            <tr>
+                <th>الاسم (من الأحوال)</th>
+                <th>الاسم (بالإنجليزية)</th>
+            </tr>
+            <tr>
+                <td>{{ $customer->fullnamea ?? '—' }}</td>
+                <td>{{ $customer->fullnamee ?? '—' }}</td>
+            </tr>
+            <tr>
+                <th>تاريخ الميلاد</th>
+                <th>الرقم الوطني</th>
+                <th>الجنس</th>
+            </tr>
+            <tr>
+                <td>{{ $customer->yearbitrh ?? '—' }}</td>
+                <td>{{ $customer->nationalID ?? '—' }}</td>
+                <td>
 
-    <div class="row">
-        <div class="col">
-            <label>اسم الأم</label>
-            <div class="input">{{ $customer->mother ?? '—' }}</div>
-        </div>
-        <div class="col">
-            <label>تاريخ الميلاد</label>
-            <div class="input">{{ $customer->yearbitrh }}</div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col">
-            <label>الرقم الوطني</label>
-            <div class="input">{{ $customer->nationalID }}</div>
-        </div>
-        <div class="col">
-            <label>الجنس</label>
-            <div class="input">{{ $customer->gender }}</div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col">
-            <label>رقم الهاتف</label>
-            <div class="input">{{ $customer->phone }}</div>
-        </div>
-        <div class="col">
-            <label>البريد الإلكتروني</label>
-            <div class="input">{{ $customer->email }}</div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col">
-            <label>المصرف</label>
-            <div class="input">{{ optional($customer->bank)->name }}</div>
-        </div>
-        <div class="col">
-            <label>فرع المصرف</label>
-            <div class="input">{{ optional($customer->branch)->name }}</div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col">
-            <label>IBAN</label>
-            <div class="input">{{ $customer->iban }}</div>
-        </div>
-        <div class="col">
-            <label>رقم القيد</label>
-            <div class="input">{{ $customer->registrationnumbers }}</div>
-        </div>
-    </div>
-
-    {{-- بيانات المطابقة من الشيت --}}
-    @if($customer->insured_no || $customer->pension_no || $customer->account_no)
-    <div class="row">
-        <div class="col">
-            <label>رقم الضمان</label>
-            <div class="input">{{ $customer->insured_no }}</div>
-        </div>
-        <div class="col">
-            <label>رقم المعاش</label>
-            <div class="input">{{ $customer->pension_no }}</div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col">
-            <label>رقم الحساب</label>
-            <div class="input">{{ $customer->account_no }}</div>
-        </div>
-        <div class="col">
-            <label>إجمالي المرتب</label>
-            <div class="input">{{ $customer->total_pension }}</div>
-        </div>
-    </div>
-    @endif
-</div>
-<div class="footer">
-    قيمة الخدمة المقدمة هي 45 دينار ليبي فقط لا غير لكل مشترك أو منتفع
-</div>
-<div class="page-break"></div>
-@endforeach
+                    {{ $customer->gender }}
 
 
+
+                </td>
+            </tr>
+            <tr>
+                <th>رقم الهاتف</th>
+                <th>البريد الإلكتروني</th>
+                <th>رقم القيد</th>
+            </tr>
+            <tr>
+                <td>{{ $customer->phone ?? '—' }}</td>
+                <td>{{ $customer->email ?? '—' }}</td>
+                <td>{{ $customer->registrationnumbers ?? '—' }}</td>
+            </tr>
+        </table>
+
+        <div class="section-title">بيانات المصرف</div>
+        <table>
+            <tr>
+                <th>المصرف</th>
+                <th>الفرع</th>
+                <th>IBAN</th>
+            </tr>
+            <tr>
+                <td>{{ optional($customer->bank)->name ?? '—' }}</td>
+                <td>{{ optional($customer->bankBranch)->name ?? '—' }}</td>
+                <td style="direction:ltr">{{ $customer->iban ?? '—' }}</td>
+            </tr>
+        </table>
+
+        @if ($customer->insured_no || $customer->pension_no || $customer->account_no || $customer->total_pension)
+            <div class="section-title">البيانات المالية</div>
+            <table>
+                <tr>
+                    <th>رقم الضمان</th>
+                    <th>رقم المعاش</th>
+                    <th>رقم الحساب</th>
+                </tr>
+                <tr>
+                    <td>{{ $customer->insured_no ?? '—' }}</td>
+                    <td>{{ $customer->pension_no ?? '—' }}</td>
+                    <td>{{ $customer->account_no ?? '—' }}</td>
+                </tr>
+                <tr>
+                    <th colspan="2">إجمالي المرتب</th>
+                    <td>{{ $customer->total_pension ?? '—' }}</td>
+                </tr>
+            </table>
+        @endif
+
+        <div class="footer">
+            قيمة الخدمة المقدمة هي 45 دينار ليبي فقط لا غير لكل مشترك أو منتفع
+        </div>
+
+        <div class="page-break"></div>
+    @endforeach
 
 </body>
+
 </html>

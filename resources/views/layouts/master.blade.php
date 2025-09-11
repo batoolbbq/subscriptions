@@ -26,9 +26,9 @@
  preloader -->
 
         @include('layouts.main-header')
-        
-            @include('layouts.sidebars.admin-sidebar')
-        
+
+        @include('layouts.sidebars.admin-sidebar')
+
         <!--=================================
  Main content -->
         <!-- main-content -->
@@ -37,6 +37,8 @@
             @yield('page-header')
 
             @yield('content')
+            @include('sweetalert::alert')
+
 
             <!--=================================
  wrapper -->

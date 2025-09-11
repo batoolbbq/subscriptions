@@ -8,7 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 class Customer extends Model
 {
     use HasFactory;
-    public $timestamps = false;
+        // protected $casts = [
+        //     'created_at' => 'datetime',
+        //     'updated_at' => 'datetime',
+        // ];
     public function cities()
     {
         return $this->belongsTo(City::class);
@@ -123,6 +126,11 @@ class Customer extends Model
     {
         return $this->belongsTo(\App\Models\Institucion::class, 'institucion_id');
     }
+    
+  public function subscription()
+{
+    return $this->belongsTo(\App\Models\Subscription::class, 'subscription_id');
+}
 
     
 }

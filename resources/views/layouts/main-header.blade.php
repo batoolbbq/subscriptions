@@ -5,7 +5,7 @@
             <div class="text-left navbar-brand-wrapper">
                 <a class="navbar-brand brand-logo" href="#">
                     <img src="{{ asset('assets/images/pre-loader/logo05.svg') }}" alt=""
-                        style="width: 200px; height: 50px">
+                        style="width: 200px; height: 60px">
                 </a>
 
                 <a class="navbar-brand brand-logo-mini" href="index.html"><img src="assets/images/logo-icon-dark.png"
@@ -37,13 +37,16 @@
                         <div class="dropdown-header">
                             <div class="media">
                                 <div class="media-body">
-                                    <h5 class="mt-0 mb-0"></h5>
-                                    <span></span>
+                                    <h5 class="mt-0 mb-0">
+                                        {{ auth()->user()->first_name . ' ' . auth()->user()->last_name }}
+                                    </h5>
+                                    <span>{{ auth()->user()->email }}</span>
                                 </div>
                             </div>
                         </div>
 
-                         <a class="dropdown-item" href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                        <a class="dropdown-item" href="#"
+                            onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                             <i class="text-danger ti-unlock"></i> {{ __('تسجيل الخروج') }}
                         </a>
 
@@ -51,6 +54,7 @@
                             @csrf
                         </form>
                     </div>
+
                 </li>
 
 

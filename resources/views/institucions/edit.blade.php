@@ -8,7 +8,7 @@
     <div class="container py-4"
         style="font-family:'Tajawal',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#8C5346;">
 
-        {{-- العنوان + زر الرجوع --}}
+        {{-- العنوان + زر الرجوع
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             <div>
                 <h3 style="margin:0;font-weight:800;color:#8C5346;">تعديل جهة عمل</h3>
@@ -17,7 +17,7 @@
                 style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#6b7280;border:1.5px solid #D0D5DD;border-radius:999px;padding:8px 14px;font-weight:800;text-decoration:none;box-shadow:0 8px 18px rgba(0,0,0,.06);">
                 <i class="fa fa-arrow-right"></i> رجوع للقائمة
             </a>
-        </div>
+        </div> --}}
 
         {{-- رسائل الأخطاء --}}
         @if ($errors->any())
@@ -80,7 +80,7 @@
                                 value="{{ old('name', $institucion->name) }}" placeholder="أدخل اسم الجهة" required>
                         </div>
 
-                        {{-- الاشتراك --}}
+                        {{-- الاشتراك
                         <div class="col-md-6">
                             <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
                                 الاشتراك <span style="color:#ef4444;">*</span>
@@ -96,9 +96,10 @@
                                     </option>
                                 @endforeach
                             </select>
-                        </div>
+                        </div> --}}
 
                         {{-- الوكيل التأميني (اختياري) --}}
+                        @role('admin')
                         <div class="col-md-6">
                             <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
                                 الوكيل التأميني (اختياري)
@@ -114,6 +115,7 @@
                                 @endforeach
                             </select>
                         </div>
+                        @endrole
                     </div>
                 </div>
             </div>
