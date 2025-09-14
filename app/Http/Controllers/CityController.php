@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use RealRashid\SweetAlert\Facades\Alert;
+use Illuminate\Support\Facades\Http;
 use jeremykenedy\LaravelLogger\App\Http\Traits\ActivityLogger;
 class CityController extends Controller
 {
@@ -111,6 +112,44 @@ class CityController extends Controller
             return redirect()->route('cities');
         }
     }
+
+
+    public function sendCitiesToApi()
+    {
+        $cities = City::all(); // أو حدد شروطك: City::whereNull('sent_to_api')->get();
+
+        foreach ($cities as $city) {
+            $payload = [
+                'id'   => (int) $city->id,   // المعرف المحلي متاعك
+                'name' => $city->name,
+            ];
+
+            $response = Http::withHeaders([
+                'accept' => 'application/json',
+                'Authorization' => 'Basic ' . base64_encode('admin:admin'),
+                'Content-Type' => 'application/json',
+            ])->post('http://192.168.81.17:6060/admin/Zones', $payload);
+
+            if ($response->successful()) {
+                // لو تم الإرسال بنجاح
+                \Log::info("✅ Zone sent successfully", $payload);
+
+                // ممكن تحدث المدينة إن تم إرسالها (لو تبي تراقب)
+                // $city->update(['sent_to_api' => true]);
+
+            } else {
+                // لو صار خطأ
+                \Log::error("❌ Zone failed", [
+                    'city_id' => $city->id,
+                    'status'  => $response->status(),
+                    'error'   => $response->body()
+                ]);
+            }
+        }
+
+        return back()->with('success', 'تمت محاولة إرسال جميع المدن للـ API');
+    }
+
 
     /**
      * Display the specified resource.

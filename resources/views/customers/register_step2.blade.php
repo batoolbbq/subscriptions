@@ -226,8 +226,7 @@
                         <input type="hidden" name="main[beneficiaries_categories_id]"
                             value="{{ session('beneficiariesSupCategories') }}">
 
-                            <input type="hidden" name="institutionId"
-                            value="{{ session('institutionId') }}">
+                        <input type="hidden" name="institutionId" value="{{ session('institution_id') }}">
 
 
                         <div class="row g-3">
@@ -282,7 +281,8 @@
                                     <option value="">اختر الفصيلة</option>
                                     @foreach ($bloodtype as $bl)
                                         <option value="{{ $bl->id }}" @selected(old('main.bloodtypes_id') == $bl->id)>
-                                            {{ $bl->name }}</option>
+                                            {{ $bl->name }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
@@ -292,7 +292,8 @@
                                     <option value="" disabled selected>اختر المنطقة الصحية</option>
                                     @foreach ($city as $c)
                                         <option value="{{ $c->id }}" @selected(old('main.cities_id') == $c->id)>
-                                            {{ $c->name }}</option>
+                                            {{ $c->name }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
@@ -325,7 +326,8 @@
                                     <option value="">اختر الحالة</option>
                                     @foreach ($socialstatuses as $s)
                                         <option value="{{ $s->id }}" @selected(old('main.socialstatuses_id') == $s->id)>
-                                            {{ $s->name }}</option>
+                                            {{ $s->name }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
@@ -362,41 +364,63 @@
                             </div>
                         @endif
 
-                        @if (session('verified_ok') && session('sheetMatch'))
-                            <div class="row g-3 mt-1">
-                                <div class="col-md-6 form-group">
-                                    <label>رقم الضمان</label>
-                                    <input type="text" class="form-control"
-                                        value="{{ session('insured_no') ?? '—' }}" readonly>
-                                    <input type="hidden" name="main[insured_no]"
-                                        value="{{ session('insured_no') ?? '' }}">
-                                </div>
-                                <div class="col-md-6 form-group">
-                                    <label>رقم المعاش</label>
-                                    <input type="text" class="form-control"
-                                        value="{{ session('pension_no') ?? '—' }}" readonly>
-                                    <input type="hidden" name="main[pension_no]"
-                                        value="{{ session('pension_no') ?? '' }}">
-                                </div>
-                            </div>
 
-                            <div class="row g-3 mt-1">
-                                <div class="col-md-6 form-group">
-                                    <label>رقم الحساب</label>
-                                    <input type="text" class="form-control"
-                                        value="{{ session('account_no') ?? '—' }}" readonly>
-                                    <input type="hidden" name="main[account_no]"
-                                        value="{{ session('account_no') ?? '' }}">
+                        @if (in_array(session('beneficiariesSupCategories'), [7, 8]))
+                            @if (session('verified_ok'))
+                                {{-- ✅ فيه بيانات من الشيت → نعرضها مقفولة --}}
+                                <div class="row g-3 mt-1">
+                                    <div class="col-md-6 form-group">
+                                        <label>رقم الضمان</label>
+                                        <input type="text" class="form-control" name="main[insured_no]"
+                                            value="{{ session('insured_no') }}" readonly>
+                                    </div>
+                                    <div class="col-md-6 form-group">
+                                        <label>رقم المعاش</label>
+                                        <input type="text" class="form-control" name="main[pension_no]"
+                                            value="{{ session('pension_no') }}" readonly>
+                                    </div>
                                 </div>
-                                <div class="col-md-6 form-group">
-                                    <label>إجمالي المرتب</label>
-                                    <input type="text" class="form-control"
-                                        value="{{ session('total_pension') ?? '—' }}" readonly>
-                                    <input type="hidden" name="main[total_pension]"
-                                        value="{{ session('total_pension') ?? '' }}">
+
+                                <div class="row g-3 mt-1">
+                                    <div class="col-md-6 form-group">
+                                        <label>رقم الحساب</label>
+                                        <input type="text" class="form-control" name="main[account_no]"
+                                            value="{{ session('account_no') }}" readonly>
+                                    </div>
+                                    <div class="col-md-6 form-group">
+                                        <label>إجمالي المرتب</label>
+                                        <input type="text" class="form-control" name="main[total_pension]"
+                                            value="{{ session('total_pension') }}" readonly>
+                                    </div>
                                 </div>
-                            </div>
+                            @else
+                                {{-- ❌ مفيش بيانات من الشيت → نعرض الحقول فاضية للتعبئة --}}
+                                <div class="row g-3 mt-1">
+                                    <div class="col-md-6 form-group">
+                                        <label>رقم الضمان</label>
+                                        <input type="text" class="form-control" name="main[insured_no]">
+                                    </div>
+                                    <div class="col-md-6 form-group">
+                                        <label>رقم المعاش</label>
+                                        <input type="text" class="form-control" name="main[pension_no]">
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mt-1">
+                                    <div class="col-md-6 form-group">
+                                        <label>رقم الحساب</label>
+                                        <input type="text" class="form-control" name="main[account_no]">
+                                    </div>
+                                    <div class="col-md-6 form-group">
+                                        <label>إجمالي المرتب</label>
+                                        <input type="text" class="form-control" name="main[total_pension]">
+                                    </div>
+                                </div>
+                            @endif
                         @endif
+
+
+
 
                         @if (session('beneficiariesSupCategories') == 1)
                             <div class="row" style="margin-top:15px">
@@ -492,17 +516,20 @@
                                 <div class="row g-3 mt-1">
                                     <div class="col-md-6 form-group">
                                         <label>رقم الهاتف</label>
-                                        <input type="text" class="form-control"
-                                            name="dependents[{{ $i }}][phone]" placeholder="9xxxxxxx">
+                                        <input type="text" class="form-control" value="{{ session('phone') }}"
+                                            readonly>
+                                        <input type="hidden" name="dependents[{{ $i }}][phone]"
+                                            value="{{ session('phone') }}">
                                     </div>
                                     <div class="col-md-6 form-group">
                                         <label>فصيلة الدم</label>
                                         <select name="dependents[{{ $i }}][bloodtypes_id]"
-                                            class="form-control" required>
+                                            class="form-control">
                                             <option value="">اختر الفصيلة</option>
                                             @foreach ($bloodtype as $bl)
                                                 <option value="{{ $bl->id }}" @selected(old("dependents.$i.bloodtypes_id") == $bl->id)>
-                                                    {{ $bl->name }}</option>
+                                                    {{ $bl->name }}
+                                                </option>
                                             @endforeach
                                         </select>
                                     </div>
@@ -512,18 +539,19 @@
                                     <div class="col-md-6 form-group">
                                         <label for="city_dep_{{ $i }}">المنطقة الصحية</label>
                                         <select id="city_dep_{{ $i }}" class="form-select city"
-                                            name="dependents[{{ $i }}][cities_id]" required>
+                                            name="dependents[{{ $i }}][cities_id]">
                                             <option value="" disabled selected>اختر المنطقة الصحية</option>
                                             @foreach ($city as $c)
                                                 <option value="{{ $c->id }}" @selected(old("dependents.$i.cities_id") == $c->id)>
-                                                    {{ $c->name }}</option>
+                                                    {{ $c->name }}
+                                                </option>
                                             @endforeach
                                         </select>
                                     </div>
                                     <div class="col-md-6 form-group">
                                         <label for="Municipal_dep_{{ $i }}">البلدية</label>
                                         <select id="Municipal_dep_{{ $i }}" class="form-select municipal"
-                                            name="dependents[{{ $i }}][municipals_id]" required disabled>
+                                            name="dependents[{{ $i }}][municipals_id]" disabled>
                                             <option value="">اختر البلدية</option>
                                         </select>
                                     </div>
@@ -548,11 +576,12 @@
                                     <div class="col-md-12 form-group">
                                         <label>الحالة الاجتماعية</label>
                                         <select name="dependents[{{ $i }}][socialstatuses_id]"
-                                            class="form-control" required>
+                                            class="form-control">
                                             <option value="">اختر الحالة</option>
                                             @foreach ($socialstatuses as $s)
                                                 <option value="{{ $s->id }}" @selected(old("dependents.$i.socialstatuses_id") == $s->id)>
-                                                    {{ $s->name }}</option>
+                                                    {{ $s->name }}
+                                                </option>
                                             @endforeach
                                         </select>
                                     </div>

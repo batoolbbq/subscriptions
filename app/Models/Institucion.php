@@ -54,5 +54,10 @@ public function customers()
     return $this->hasMany(\App\Models\Customer::class, 'institucion_id');
 }
 
+public function workplaceCode()
+{
+    return $this->belongsTo(WorkplaceCode::class, 'workplace_code_id');
+}
+
 
 }

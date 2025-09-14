@@ -177,7 +177,11 @@
 
 <body>
 
-    <h2 class="title">اسم الوكالة: وكالة بلدية {{ optional($customer->municipals)->name ?? '' }}</h2>
+      <h2 class="title"> الوكالة:
+            {{ auth()->user()->first_name ?? '' }} {{ auth()->user()->last_name ?? '' }}
+            / {{ optional(auth()->user()->insuranceAgents()->first()->municipals)->name ?? '' }}
+
+        </h2>
     <h2 class="title">بيانات المشترك / المنتفع</h2>
 
     <!-- البيانات الأساسية -->
@@ -311,7 +315,7 @@
             أو منتفع
 
         </div>  --}}
-{{--
+        {{--
          <div class="fee">
             قيمة الخدمة المقدمة: <span class="red">إصدار جديد</span> —
             <span class="red">خمسة وأربعون دينار ليبي (45 د.ل)</span> لكل مشترك أو منتفع

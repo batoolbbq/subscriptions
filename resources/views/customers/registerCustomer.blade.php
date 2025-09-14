@@ -4,6 +4,8 @@
 <head>
     <meta charset="UTF-8" />
     <title>بوابة تسجيل المشتركين</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
@@ -252,6 +254,42 @@
                     <form action="{{ route('check-customer') }}" id="signUp-form" method="POST">
                         @csrf
 
+                        {{-- نوع المشترك --}}
+                        <div class="form-group">
+                            <label for="subscriber_type">نوع المشترك</label>
+                            <div class="input-icon">
+                                <i class="fa fa-user"></i>
+                                <select id="subscriber_type" name="subscriber_type" required>
+                                    <option value="">اختر نوع المشترك...</option>
+                                    <option value="husband" {{ old('subscriber_type') == 'husband' ? 'selected' : '' }}>
+                                        زوج</option>
+                                    <option value="wife" {{ old('subscriber_type') == 'wife' ? 'selected' : '' }}>زوجة
+                                    </option>
+                                    <option value="single" {{ old('subscriber_type') == 'single' ? 'selected' : '' }}>
+                                        أعزب/عزباء</option>
+                                </select>
+                            </div>
+                            @error('subscriber_type')
+                                <span class="error-text">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        {{-- الرقم الوطني للزوج --}}
+                        <div class="form-group" id="spouse-nationalid-block" style="display:none;">
+                            <label for="spouse_national_id">الرقم الوطني للزوج</label>
+                            <div class="input-icon">
+                                <i class="fa fa-id-card"></i>
+                                <input type="text" name="spouse_national_id" id="spouse_national_id"
+                                    value="{{ old('spouse_national_id') }}" placeholder="XXXXXXXXXXXX" maxlength="13"
+                                    minlength="12" pattern="\d{12,13}" onkeypress="return onlyNumberKey(event)">
+                            </div>
+                            @error('spouse_national_id')
+                                <span class="error-text">{{ $message }}</span>
+                            @enderror
+                            <small class="help">أدخل الرقم الوطني للزوج في حالة اختيار (زوجة)</small>
+                        </div>
+
+
                         {{-- الرقم الوطني (12 أو 13 رقم) --}}
                         <div class="form-group">
                             <label for="nationalID">الرقم الوطني</label>
@@ -272,7 +310,7 @@
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <div class="input-icon" style="flex: 1;">
                                     <i class="fa fa-phone"></i>
-                                    <input name="phone" id="phone"  maxlength="9" minlength="9"
+                                    <input name="phone" id="phone" maxlength="9" minlength="9"
                                         onkeypress="return onlyNumberKey(event)"
                                         title="يرجي كتابة رقم الهاتف مطابقا (xxx xx xx )91-92-93-94-21"
                                         pattern="(92|91|94|93|21)?[0-9]{7}" value="{{ old('phone') }}"
@@ -321,7 +359,7 @@
                             <label for="beneficiariesSupCategories">الفئة</label>
                             <div class="input-icon">
                                 <i class="fa fa-caret-down"></i>
-                                <select id="beneficiariesSupCategories" name="beneficiariesSupCategories" >
+                                <select id="beneficiariesSupCategories" name="beneficiariesSupCategories">
                                     <option selected value="">الرجاء اختر الفئة</option>
                                     @foreach ($customer as $items)
                                         <option value="{{ $items->id }}"
@@ -364,6 +402,7 @@
                                 <i class="fa fa-building"></i>
                                 <select id="institution_id" name="institution_id">
                                     <option value="">اختر جهة العمل...</option>
+                                    <option value="__new__">+ إضافة جهة عمل جديدة</option>
                                 </select>
                             </div>
                             @error('institution_id')
@@ -380,15 +419,104 @@
             </div>
 
             {{-- أخطاء Laravel --}}
+            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
             @if ($errors->any())
-                <div class="panel-error">
-                    <ul style="margin:0; padding-right:18px;">
-                        @foreach ($errors->all() as $error)
-                            <li style="margin:4px 0;">{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
+                <script>
+                    Swal.fire({
+                        icon: 'error',
+                        html: `
+                <ul style="text-align: center; list-style: none; padding:0; margin:0;">
+                    @foreach ($errors->all() as $error)
+                        <li style="margin:5px 0;">{{ $error }}</li>
+                    @endforeach
+                </ul>
+            `,
+                        confirmButtonText: 'حسناً',
+                        confirmButtonColor: '#ff8800' // برتقالي
+                    }); <
+                    script >
+                        const instSelect = document.getElementById('institution_id');
+
+                    instSelect.addEventListener('change', function() {
+                        if (this.value === '__new__') {
+                            Swal.fire({
+                                title: 'إضافة جهة عمل جديدة',
+                                html: `
+          <div style="text-align:right">
+            <label>اسم الجهة</label>
+            <input id="new_inst_name" type="text" class="swal2-input" placeholder="أدخل اسم الجهة">
+
+            <label>نوع جهة العمل</label>
+            <select id="new_inst_wc" class="swal2-select">
+              <option value="">— اختر النوع —</option>
+              @foreach ($workCategories as $wc)
+                <option value="{{ $wc->id }}">{{ $wc->name }}</option>
+              @endforeach
+            </select>
+          </div>
+        `,
+                                focusConfirm: false,
+                                showCancelButton: true,
+                                confirmButtonText: 'حفظ',
+                                cancelButtonText: 'إلغاء',
+                                confirmButtonColor: '#F58220',
+                                preConfirm: () => {
+                                    const name = document.getElementById('new_inst_name').value.trim();
+                                    const wc = document.getElementById('new_inst_wc').value;
+
+                                    if (!name || !wc) {
+                                        Swal.showValidationMessage('الرجاء إدخال الاسم واختيار النوع');
+                                        return false;
+                                    }
+                                    return {
+                                        name,
+                                        wc
+                                    };
+                                }
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    // إرسال AJAX لإنشاء الجهة
+                                    fetch("{{ route('institucions.store') }}", {
+                                            method: "POST",
+                                            headers: {
+                                                "Content-Type": "application/json",
+                                                "X-CSRF-TOKEN": "{{ csrf_token() }}"
+                                            },
+                                            body: JSON.stringify({
+                                                name: result.value.name,
+                                                work_categories_id: result.value.wc
+                                            })
+                                        })
+                                        .then(res => res.json())
+                                        .then(data => {
+                                            if (data.id) {
+                                                // إضافة الجهة الجديدة للقائمة وتحديدها
+                                                const opt = document.createElement("option");
+                                                opt.value = data.id;
+                                                opt.textContent = data.name;
+                                                instSelect.insertBefore(opt, instSelect.querySelector(
+                                                    'option[value="__new__"]'));
+                                                instSelect.value = data.id;
+                                                Swal.fire('تم الحفظ!', 'تمت إضافة جهة العمل بنجاح', 'success');
+                                            } else {
+                                                Swal.fire('خطأ', data.message || 'تعذر حفظ الجهة', 'error');
+                                                instSelect.value = "";
+                                            }
+                                        })
+                                        .catch(() => {
+                                            Swal.fire('خطأ', 'تعذر الاتصال بالسيرفر', 'error');
+                                            instSelect.value = "";
+                                        });
+                                } else {
+                                    instSelect.value = "";
+                                }
+                            });
+                        }
+                    });
+                </script>
             @endif
+
 
             {{-- نتيجة CRA من الـsession --}}
             @if (session('cra_ok'))
@@ -458,6 +586,28 @@
         </div>
     </div>
     <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const typeSelect = document.getElementById('subscriber_type');
+            const spouseBlock = document.getElementById('spouse-nationalid-block');
+            const spouseInput = document.getElementById('spouse_national_id');
+
+            function toggleSpouseField() {
+                if (typeSelect.value === 'wife') {
+                    spouseBlock.style.display = '';
+                    spouseInput.setAttribute('required', true);
+                } else {
+                    spouseBlock.style.display = 'none';
+                    spouseInput.removeAttribute('required');
+                    spouseInput.value = '';
+                }
+            }
+
+            typeSelect.addEventListener('change', toggleSpouseField);
+
+            // لما يرجع old input
+            toggleSpouseField();
+        });
+
         function sendotp() {
             const phone = document.getElementById('phone').value;
 
@@ -586,6 +736,7 @@
                 for (const it of list) {
                     opts.push(`<option value="${it.id}">${it.name ?? it.title ?? ''}</option>`);
                 }
+                opts.push('<option value="__new__">+ إضافة جهة عمل جديدة</option>');
                 instSelect.innerHTML = opts.join('');
             });
             document.addEventListener('DOMContentLoaded', () => {
@@ -614,6 +765,189 @@
             });
         })();
     </script>
+
+    <script>
+        (function() {
+            const catSelect = document.getElementById('beneficiariesSupCategories');
+            const wcBlock = document.getElementById('workCategoryBlock');
+            const wcSelect = document.getElementById('work_category_id');
+            const instBlock = document.getElementById('institutionBlock');
+            const instSelect = document.getElementById('institution_id');
+
+            const needsWorkCat = id => id === '7' || id === '8';
+            const ALLOWED_BY_CAT = {
+                '7': new Set(['19', '20']),
+                '8': new Set(['21'])
+            };
+
+            function filterWorkCategories() {
+                const cat = catSelect.value || '';
+                const allowed = ALLOWED_BY_CAT[cat];
+                Array.from(wcSelect.options).forEach(opt => {
+                    if (!opt.value) return opt.style.display = '';
+                    opt.style.display = !allowed ? '' : (allowed.has(String(opt.value)) ? '' : 'none');
+                });
+                const hiddenSelected = wcSelect.selectedOptions[0] && wcSelect.selectedOptions[0].style.display ===
+                    'none';
+                if (hiddenSelected) {
+                    wcSelect.value = '';
+                    instSelect.innerHTML = '<option value="">اختر جهة العمل...</option>';
+                    wcSelect.dispatchEvent(new Event('change'));
+                }
+            }
+
+            function lockIfSingle() {
+                const cat = catSelect.value || '';
+                const allowed = ALLOWED_BY_CAT[cat];
+                if (allowed && allowed.size === 1) {
+                    const only = [...allowed][0];
+                    wcSelect.value = only;
+                    wcSelect.disabled = true;
+                    wcSelect.dispatchEvent(new Event('change'));
+                } else wcSelect.disabled = false;
+            }
+
+            catSelect.addEventListener('change', () => {
+                const show = needsWorkCat(catSelect.value || '');
+                wcBlock.style.display = show ? '' : 'none';
+                instBlock.style.display = show ? '' : 'none';
+                wcSelect.toggleAttribute('required', show);
+                instSelect.toggleAttribute('required', show);
+                if (!show) {
+                    wcSelect.value = '';
+                    wcSelect.disabled = false;
+                    instSelect.innerHTML = '<option value="">اختر جهة العمل...</option>';
+                }
+                filterWorkCategories();
+                lockIfSingle();
+            });
+
+            wcSelect.addEventListener('change', () => {
+                const wcId = wcSelect.value || '';
+                if (!wcId) {
+                    instSelect.innerHTML = '<option value="">اختر جهة العمل...</option>';
+                    return;
+                }
+                const list = INSTITUCIONS.filter(x => String(x.work_categories_id) === String(wcId));
+                const opts = ['<option value="">اختر جهة العمل...</option>'];
+                for (const it of list) {
+                    opts.push(`<option value="${it.id}">${it.name ?? it.title ?? ''}</option>`);
+                }
+                opts.push('<option value="__new__">+ إضافة جهة عمل جديدة</option>');
+                instSelect.innerHTML = opts.join('');
+            });
+
+            // فتح مودال "إضافة جهة عمل جديدة"
+            instSelect.addEventListener('change', function() {
+                if (this.value === '__new__') {
+                    Swal.fire({
+                        title: 'إضافة جهة عمل جديدة',
+                        html: `
+          <div style="text-align:right">
+            <label>اسم الجهة</label>
+            <input id="new_inst_name" type="text" class="swal2-input" placeholder="أدخل اسم الجهة">
+
+            <label>نوع جهة العمل</label>
+            <select id="new_inst_wc" class="swal2-select">
+              <option value="">— اختر النوع —</option>
+              @foreach ($workCategories as $wc)
+                <option value="{{ $wc->id }}">{{ $wc->name }}</option>
+              @endforeach
+            </select>
+          </div>
+        `,
+                        showCancelButton: true,
+                        confirmButtonText: 'حفظ',
+                        cancelButtonText: 'إلغاء',
+                        confirmButtonColor: '#F58220',
+                        preConfirm: () => {
+                            const name = document.getElementById('new_inst_name').value.trim();
+                            const wc = document.getElementById('new_inst_wc').value;
+                            if (!name || !wc) {
+                                Swal.showValidationMessage('الرجاء إدخال الاسم واختيار نوع الجهة');
+                                return false;
+                            }
+                            return {
+                                name,
+                                wc
+                            };
+                        }
+                    }).then(result => {
+                        if (result.isConfirmed) {
+                            fetch("{{ route('institucion.storefromsubscriberview') }}", {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                        "Accept": "application/json",
+                                        "X-CSRF-TOKEN": document.querySelector(
+                                            'meta[name="csrf-token"]').getAttribute('content')
+                                    },
+                                    body: JSON.stringify({
+                                        name: result.value.name,
+                                        work_categories_id: result.value.wc
+                                    })
+                                })
+                                .then(async res => {
+                                    if (!res.ok) {
+                                        const errorData = await res.json().catch(() => ({}));
+                                        throw errorData.message || 'تعذر الاتصال بالسيرفر';
+                                    }
+                                    return res.json();
+                                })
+                                .then(data => {
+                                    if (data.id) {
+                                        const opt = document.createElement("option");
+                                        opt.value = data.id;
+                                        opt.textContent = data.name;
+                                        instSelect.insertBefore(opt, instSelect.querySelector(
+                                            'option[value="__new__"]'));
+                                        instSelect.value = data.id;
+                                        Swal.fire('تم الحفظ!', 'تمت إضافة جهة العمل بنجاح',
+                                            'success');
+                                    }
+                                })
+                                .catch(err => {
+                                    Swal.fire('خطأ', typeof err === 'string' ? err :
+                                        'تعذر الاتصال بالسيرفر', 'error');
+                                    instSelect.value = "";
+                                });
+                        } else {
+                            instSelect.value = "";
+                        }
+                    });
+                }
+            });
+
+            // old input
+            document.addEventListener('DOMContentLoaded', () => {
+                const oldCat = "{{ old('beneficiariesSupCategories') }}";
+                const show = needsWorkCat(oldCat);
+                wcBlock.style.display = show ? '' : 'none';
+                instBlock.style.display = show ? '' : 'none';
+                wcSelect.toggleAttribute('required', show);
+                instSelect.toggleAttribute('required', show);
+                filterWorkCategories();
+                lockIfSingle();
+
+                const oldWc = "{{ old('work_category_id') }}";
+                if (show && oldWc) {
+                    wcSelect.value = oldWc;
+                    wcSelect.dispatchEvent(new Event('change'));
+                    const list = INSTITUCIONS.filter(x => String(x.work_categories_id) === String(oldWc));
+                    const opts = ['<option value="">اختر جهة العمل...</option>'];
+                    for (const it of list) {
+                        opts.push(`<option value="${it.id}">${it.name ?? it.title ?? ''}</option>`);
+                    }
+                    opts.push('<option value="__new__">+ إضافة جهة عمل جديدة</option>');
+                    instSelect.innerHTML = opts.join('');
+                    const oldInst = "{{ old('institution_id') }}";
+                    if (oldInst) instSelect.value = oldInst;
+                }
+            });
+        })();
+    </script>
+
+
 </body>
 
 </html>

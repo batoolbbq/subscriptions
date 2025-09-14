@@ -28,6 +28,15 @@
                   box-shadow:0 8px 18px rgba(0,0,0,.06);">
                         تعديل
                     </a>
+                @else 
+                @role('insurance-manager')
+                    <a href="{{ route('institucions.edit', $institucion) }}"
+                        style="padding:8px 16px;border:1.5px solid #FFD8A8;border-radius:999px;background:#FFF5E6;
+                  color:#92400E;font-weight:800;font-size:.9rem;text-decoration:none;
+                  box-shadow:0 8px 18px rgba(0,0,0,.06);">
+                        تعديل
+                    </a>
+                    @endrole
                 @endif
                 <a href="{{ route('institucions.index') }}"
                     style="padding:8px 16px;border:1.5px solid var(--line);border-radius:999px;background:#fff;
@@ -49,30 +58,46 @@
 
                 @php($dups = session('similar_conflicts', []))
                 @if (!empty($dups))
-                    <ul style="margin:0;padding-inline-start:20px;">
-                        @foreach ($dups as $dup)
-                            <li style="margin:4px 0;">
-                                @if (Route::has('institucions.show'))
-                                    <a href="{{ route('institucions.show', $dup['id']) }}"
-                                        style="text-decoration:underline;color:#7c2d12;">
-                                        {{ $dup['name'] }}
-                                    </a>
-                                @else
-                                    {{ $dup['name'] }}
-                                @endif
-                                <span style="opacity:.8;">— تشابه تقريبي:
-                                    {{ isset($dup['percent']) ? $dup['percent'] . '%' : 'غير متاح' }}</span>
-                            </li>
-                        @endforeach
-                    </ul>
+                    <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+                        <thead>
+                            <tr style="background:#fff8eb;color:#92400e;">
+                                <th style="padding:6px 10px;text-align:right;border-bottom:1px solid #f59e0b;">الجهة</th>
+                                <th style="padding:6px 10px;text-align:right;border-bottom:1px solid #f59e0b;">نسبة التشابه
+                                </th>
+                                <th style="padding:6px 10px;text-align:right;border-bottom:1px solid #f59e0b;">عدد المشتركين
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($dups as $dup)
+                                <tr>
+                                    <td style="padding:6px 10px;border-bottom:1px solid #f3f4f6;">
+                                        @if (Route::has('institucions.show'))
+                                            <a href="{{ route('institucions.show', $dup['id']) }}"
+                                                style="text-decoration:underline;color:#7c2d12;">
+                                                {{ $dup['name'] }}
+                                            </a>
+                                        @else
+                                            {{ $dup['name'] }}
+                                        @endif
+                                    </td>
+                                    <td style="padding:6px 10px;border-bottom:1px solid #f3f4f6;">
+                                        {{ isset($dup['percent']) ? $dup['percent'] . '%' : 'غير متاح' }}
+                                    </td>
+                                    <td style="padding:6px 10px;border-bottom:1px solid #f3f4f6;">
+                                        {{ $dup['count'] ?? 0 }}
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
 
-                    {{-- زر يفتح SweetAlert لطلب الترميز ثم يرسل فورم خفي بـ force=1 --}}
                     @can('institucions.toggle-status')
                         @if (!$institucion->status)
                             <button type="button" id="btn-activate-anyway"
-                                style="padding:8px 16px;border:1.5px solid #f59e0b;border-radius:999px;
+                                style="margin-top:10px;padding:8px 16px;border:1.5px solid #f59e0b;border-radius:999px;
                                        background:#fff7ed;color:#92400e;font-weight:800;font-size:.85rem;">
-                                تفعيل رغم التشابه
+                                تفعيل رغم التشابه و نقل المشتركين
                             </button>
                         @endif
                     @endcan
@@ -90,7 +115,7 @@
             </div>
         @endif
 
-        {{-- أزرار التفعيل/الإيقاف --}}
+        {{-- أزرار التفعيل/الإيقاف + زر النقل --}}
         <div class="d-flex gap-2 mb-3">
             @can('institucions.toggle-status')
                 <form action="{{ route('institucions.toggle-status', $institucion) }}" method="POST">
@@ -112,45 +137,24 @@
                         </button>
                     @endif
                 </form>
+
+                {{-- زر النقل اليدوي --}}
+
+                {{-- فورم خفي للنقل
+                <form id="transfer-form" action="{{ route('institucions.transfer-customers', $institucion) }}" method="POST"
+                    style="display:none;">
+                    @csrf
+                    <input type="hidden" name="from_id" id="transfer-from-id">
+                </form> --}}
+
+
             @endcan
         </div>
 
-        <style>
-            .chip-label {
-                color: var(--muted);
-                font-size: .85rem;
-                margin-bottom: 4px
-            }
 
-            .static-like {
-                width: 100%;
-                border: 1.5px solid var(--line);
-                border-radius: 14px;
-                padding: 10px 12px;
-                background: #f9fafb;
-                color: var(--ink);
-                font-weight: 700
-            }
 
-            .static-like.is-empty {
-                color: #9ca3af;
-                font-weight: 500
-            }
 
-            .link-like {
-                display: inline-block;
-                text-decoration: none;
-                font-weight: 800;
-                border: 1.5px solid var(--line);
-                border-radius: 12px;
-                padding: 8px 12px;
-                background: #fff
-            }
 
-            .link-like:hover {
-                box-shadow: 0 6px 16px rgba(0, 0, 0, .08)
-            }
-        </style>
         <div class="row g-4">
             {{-- بطاقة المعلومات الأساسية --}}
             <div class="col-12 col-lg-8">
@@ -159,10 +163,7 @@
                     <div
                         style="background:linear-gradient(135deg,#d95b00 0%,#F58220 35%,#FF8F34 70%,#ffb066 100%);
        color:#fff;padding:12px 16px;font-weight:800;border-radius:32px 32px 0 0;">
-                        {{-- <span
-                            style="background:#1d4ed8;color:#fff;padding:4px 12px;border-radius:999px;font-size:.8rem;">بيانات
-                            أساسية</span> --}} <span
-                            style="font-size:.9rem;color:{{ $institucion->status ? '#ffff' : '#374151' }};">
+                        <span style="font-size:.9rem;color:{{ $institucion->status ? '#ffff' : '#374151' }};">
                             الحالة:
                             @if ($institucion->status)
                                 <span
@@ -249,12 +250,44 @@
                             style="color:#9F5547;text-decoration:underline;">
                             عرض ملف الإكسل الحالي
                         </a>
-
-
-
                     </div>
                 </div>
             </div>
+
+            {{-- بطاقة المشتركين --}}
+            @role('insurance-manager')
+                <div class="col-12 mt-4">
+                    <div
+                        style="border:1.5px solid var(--line);border-radius:20px;padding:16px;background:#fff;
+    box-shadow:0 10px 20px rgba(0,0,0,.06);">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 style="font-weight:800;color:var(--brown);margin:0;">
+                                عدد المشتركين التابعين لهذه الجهة: {{ $customersCount }}
+                            </h5>
+
+                            {{-- زر النقل --}}
+                            @if ($customersCount > 0)
+                                <a href="{{ route('institucions.transferview', $institucion) }}"
+                                    style="padding:8px 16px;border:1.5px solid #FFD8A8;border-radius:999px;
+                          background:#FFF5E6;color:#92400E;font-weight:800;font-size:.9rem;
+                          text-decoration:none;box-shadow:0 8px 18px rgba(0,0,0,.06);">
+                                    نقل المشتركين
+                                </a>
+                            @else
+                                <span
+                                    style="padding:8px 16px;border:1.5px solid #d1d5db;border-radius:999px;
+                             background:#f3f4f6;color:#9ca3af;font-weight:800;font-size:.9rem;
+                             box-shadow:0 8px 18px rgba(0,0,0,.06);cursor:not-allowed;">
+                                    نقل المشتركين
+                                </span>
+                            @endif
+
+                        </div>
+                    </div>
+                </div>
+            @endrole
+
+
 
             {{-- فورم خفي لإرسال force=1 + code عند "تفعيل رغم التشابه" --}}
             @can('institucions.toggle-status')
@@ -266,24 +299,22 @@
                     <input type="hidden" name="code" id="force-code-input">
                 </form>
             @endcan
-
         </div> {{-- .row --}}
-
     </div> {{-- .container --}}
 @endsection
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        // زر تفعيل رغم التشابه
         (function() {
             const btn = document.getElementById('btn-activate-anyway');
             if (!btn) return;
 
             btn.addEventListener('click', async function() {
-                // لو الجهة ما عندهاش ترميز → طالب به
                 const hasCode = {{ $institucion->code ? 'true' : 'false' }};
-
                 let codeVal = '';
+
                 if (!hasCode) {
                     const {
                         value: inputCode
@@ -299,10 +330,9 @@
                         confirmButtonText: 'تفعيل',
                         cancelButtonText: 'إلغاء'
                     });
-                    if (!inputCode) return; // ألغى
+                    if (!inputCode) return;
                     codeVal = inputCode.trim();
                 } else {
-                    // عنده ترميز مسبقًا → بس تأكيد بسيط
                     const ok = await Swal.fire({
                         title: 'تفعيل رغم التشابه؟',
                         icon: 'warning',
@@ -313,12 +343,74 @@
                     if (!ok.isConfirmed) return;
                 }
 
-                // جهزي وأرسلي الفورم الخفي
                 const form = document.getElementById('force-activate-form');
                 const hiddenCode = document.getElementById('force-code-input');
                 if (codeVal) hiddenCode.value = codeVal;
                 form.submit();
             });
         })();
+
+        // زر نقل المشتركين
+        document.getElementById('btn-transfer-customers').addEventListener('click', async function() {
+            const options = @json($otherInstitucions);
+            let inputOptions = {};
+            for (const [id, name] of Object.entries(options)) {
+                inputOptions[id] = name;
+            }
+
+            const {
+                value: fromId
+            } = await Swal.fire({
+                title: 'اختر الجهة المراد النقل منها',
+                input: 'select',
+                inputOptions: inputOptions,
+                inputPlaceholder: 'اختر جهة عمل...',
+                showCancelButton: true,
+                confirmButtonText: 'نقل',
+                cancelButtonText: 'إلغاء'
+            });
+
+            if (fromId) {
+                document.getElementById('transfer-from-id').value = fromId;
+                document.getElementById('transfer-form').submit();
+            }
+        });
+    </script>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const part1 = document.getElementById('select-part1');
+            const part2 = document.getElementById('select-part2');
+            const extra = document.getElementById('extra-code');
+            const hiddenSub = document.getElementById('sub_code_id');
+
+            // عند اختيار الأساسي
+            part1.addEventListener('change', function() {
+                const parentId = this.value;
+                part2.innerHTML = '<option value="">اختر التصنيف الفرعي</option>';
+                part2.disabled = true;
+
+                if (parentId) {
+                    fetch(`/workplace_codes/by-parent/${parentId}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            data.forEach(item => {
+                                const opt = document.createElement('option');
+                                opt.value = item.id;
+                                opt.dataset.code = item.code;
+                                opt.textContent = `${item.name} (${item.code})`;
+                                part2.appendChild(opt);
+                            });
+                            part2.disabled = false;
+                        });
+                }
+            });
+
+            // عند اختيار الفرعي نخزن الـ id
+            part2.addEventListener('change', function() {
+                hiddenSub.value = this.value || '';
+            });
+        });
     </script>
 @endpush

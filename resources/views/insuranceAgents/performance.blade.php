@@ -1,5 +1,13 @@
 @extends('layouts.master')
+
 @section('title', 'بيانات وكيل التأمين')
+
+
+{{-- روابط Select2 --}}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 
 @section('content')
     <div class="container py-4"
@@ -8,28 +16,79 @@
        --brand:#F58220;--brand-600:#ff8f34;--brand-700:#d95b00;
        --brown:#8C5346;--green-50:#e9fbf2;--green-700:#10734a;--brand-dark:#c24a00;">
 
+
+
+
         {{-- عنوان الصفحة --}}
         <div class="mb-3 text-center">
-            <h3 style="margin:0;color:var(--brown);font-weight:800">بحث عن وكيل برقم الهاتف</h3>
-            <div style="color:var(--muted);font-size:.9rem">أدخل رقم الهاتف ثم اضغط بحث لعرض بيانات الوكيل</div>
+            <h3 style="margin:0;color:var(--brown);font-weight:800">بحث عن وكيل </h3>
+            <div style="color:var(--muted);font-size:.9rem"> اختر اسم الوكيل او ابحث برقم الهاتف ثم اضغط بحث لعرض بيانات
+                الوكيل</div>
         </div>
 
-        {{-- نموذج البحث (هاتف فقط) --}}
-        <form method="GET" action="{{ route('agents.performance.index') }}" class="row g-3 mb-4 justify-content-center">
-            <div class="col-md-4">
-                <label class="form-label" style="color:var(--muted);font-weight:700">رقم الهاتف (الوكيل)</label>
-                <input type="text" name="phone" value="{{ $phone }}" class="form-control"
-                    placeholder="مثال: 0912345678"
-                    style="border-radius:999px;border:1.5px solid #d7dbe0;padding:10px 14px;">
+        {{-- نموذج البحث (داخل كارت) --}}
+        <div class="card shadow-sm mb-4" style="border-radius:14px;overflow:hidden;border:1px solid #E5E7EB;">
+            <div class="card-body">
+                <form method="GET" action="{{ route('agents.performance.index') }}" class="row g-3 align-items-end">
+
+                    <div class="col-md-4">
+                        <label class="form-label" style="color:var(--muted);font-weight:700">رقم الهاتف (الوكيل)</label>
+                        <input type="text" name="phone" value="{{ $phone }}" class="form-control search-input"
+                            placeholder="مثال: 0912345678">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label" style="color:var(--muted);font-weight:700">اسم الوكيل</label>
+                        <select id="agentSelect" name="agent_id" class="styled-select w-100">
+                            <option value="">— اختر الوكيل —</option>
+                            @foreach ($agentsList as $a)
+                                <option value="{{ $a->id }}" {{ request('agent_id') == $a->id ? 'selected' : '' }}>
+                                    {{ $a->name }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                    </div>
+
+
+
+
+                    <div class="col-md-2">
+                        <button class="btn w-100"
+                            style="background:var(--brand);color:#fff;border:none;border-radius:6px;
+                           padding:10px 16px;font-weight:800;box-shadow:0 8px 20px rgba(245,130,32,.25);">
+                            بحث
+                        </button>
+                    </div>
+                </form>
+
+                <style>
+                    .styled-select {
+                        border: 1.5px solid #d7dbe0;
+                        border-radius: 6px;
+                        padding: 10px 14px;
+                        height: 46px;
+                        font-size: 0.95rem;
+                        color: #333;
+                        background-color: #fff;
+                        appearance: none;
+                        /* يخفي السهم الافتراضي */
+                        -webkit-appearance: none;
+                        -moz-appearance: none;
+                        background-image: url("data:image/svg+xml;utf8,<svg fill='%23F58220' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+                        background-repeat: no-repeat;
+                        background-position: left 12px center;
+                        /* السهم يسار (RTL) */
+                        background-size: 18px;
+                    }
+                </style>
+
+
             </div>
-            <div class="col-md-2 align-self-end">
-                <button class="btn w-100"
-                    style="background:var(--brand);color:#fff;border:none;border-radius:999px;
-                     padding:10px 16px;font-weight:800;box-shadow:0 10px 22px rgba(245,130,32,.25);">
-                    بحث
-                </button>
-            </div>
-        </form>
+        </div>
+
+
+
 
         {{-- لا يوجد وكيل --}}
         @if ($phone && !$agent)
@@ -70,14 +129,13 @@
 
                         <div class="col-md-4">
                             <div style="color:var(--muted);font-size:.9rem">المنطقة الصحية</div>
-                            <div style="font-weight:800;color:var(--ink)">
-                                {{ optional(optional($agent->municipal)->zone)->name ?? (optional($agent->city)->name ?? '—') }}
+                            <div style="font-weight:800;color:var(--ink)"> {{ optional($agent->cities)->name ?? '—' }}
                             </div>
                         </div>
 
                         <div class="col-md-4">
                             <div style="color:var(--muted);font-size:.9rem">البلدية</div>
-                            <div style="font-weight:800;color:var(--ink)">{{ optional($agent->municipal)->name ?? '—' }}
+                            <div style="font-weight:800;color:var(--ink)">{{ optional($agent->municipals)->name ?? '—' }}
                             </div>
                         </div>
 
@@ -131,4 +189,6 @@
             </div>
         @endif
     </div>
+
+
 @endsection

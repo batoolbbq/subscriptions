@@ -18,27 +18,41 @@ use App\Models\AddedServiceService;
 class insuranceperformance extends Controller
 {
 
-        public function insuranceData(Request $request)
-       {
-       $phone = trim((string) $request->get('phone', ''));
-        $agent = null;
-        $totalServices = 0;
+    public function insuranceData(Request $request)
+{
+    $phone   = trim((string) $request->get('phone', ''));
+    $agentId = $request->get('agent_id'); // نجيب القيمة من السلكت
+    $agent   = null;
+    $totalServices = 0;
 
-        if ($phone !== '') {
-            $agent = insuranceAgents::with('users')
-                ->where('phone_number', $phone)
-                ->first();
-
-            if ($agent) {
-                $userIds = $agent->users->pluck('id');
-
-                if ($userIds->isNotEmpty()) {
-                    $totalServices = ServiceLog::whereIn('user_id', $userIds)->count();
-                }
-            }
-        }
-        return view('insuranceAgents.performance', compact('phone', 'agent','totalServices'));
+    // لو بحث بالهاتف
+    if ($phone !== '') {
+        $agent = insuranceAgents::with('users')
+            ->where('phone_number', $phone)
+            ->first();
     }
+
+    // لو ما فيهش هاتف أو ما لاقاش، نجرب بالاسم (agent_id)
+    if (!$agent && $agentId) {
+        $agent = insuranceAgents::with('users')
+            ->where('id', $agentId)
+            ->first();
+    }
+
+    // حساب الخدمات
+    if ($agent) {
+        $userIds = $agent->users->pluck('id');
+        if ($userIds->isNotEmpty()) {
+            $totalServices = ServiceLog::whereIn('user_id', $userIds)->count();
+        }
+    }
+
+    // نجيب قائمة الوكلاء باش نعرضهم في السلكت
+    $agentsList = insuranceAgents::orderBy('name')->get();
+
+    return view('insuranceAgents.performance', compact('phone', 'agent', 'totalServices', 'agentsList'));
+}
+
 
 
 

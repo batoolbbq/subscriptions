@@ -12,6 +12,9 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\insuranceperformance;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\MunicipalController;
+use App\Http\Controllers\CardController;
+use App\Http\Controllers\WorkplaceCodeController;
+
 use Illuminate\Support\Facades\Validator;
 
 
@@ -26,10 +29,30 @@ use Illuminate\Support\Facades\Validator;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+
+
+
+Route::get('/cities/send-to-api', [CityController::class, 'sendCitiesToApi'])
+    ->name('cities.sendToApi');
+
+
+Route::resource('workplace_codes', \App\Http\Controllers\WorkplaceCodeController::class);
+
+    Route::get('create-child', [WorkplaceCodeController::class, 'createChild'])->name('workplace_codes.create_child');
+    Route::post('workplace_codes', [WorkplaceCodeController::class, 'store'])->name('workplace_codes.store');
+
+    Route::get('/workplace-codes/{parent}/children', [WorkplaceCodeController::class, 'children'])->name('workplace_codes.children');
+
+Route::post('/institucion/storefromsubscriberview', [App\Http\Controllers\InstitucionController::class, 'storefromsubscriberview'])
+    ->name('institucion.storefromsubscriberview');
+
     Route::post('/search/customers', [CustomerController::class, 'searchUnified'])
         ->name('search.customers');
     Route::post('/cra/family', [App\Http\Controllers\CustomerController::class, 'lookup'])->name('cra.lookup2');
 
+
+    Route::post('/verify-otp', [CustomerController::class, 'verifyOtp'])
+    ->name('verify.otp');
 
 Route::get('/', function () {
     return view('welcome');
@@ -79,6 +102,19 @@ Route::get('/customers/{customer}/print-card', [CustomerController::class, 'prin
 
     Route::get('/agents/{agent}/services/institutions',[App\Http\Controllers\insuranceperformance::class, 'servicesInstitutions'])
     ->name('agents.services.institutions');
+    //   Route::post('institucions/{institucion}/transfer-customers', [\App\Http\Controllers\InstitucionController::class, 'transferCustomers'])
+    // ->name('institucions.transfer-customers');
+
+    // صفحة اختيار الجهة للنقل
+Route::get('institucions/{institucion}/transfer', [\App\Http\Controllers\InstitucionController::class, 'transferView'])
+    ->name('institucions.transferview');
+
+// تنفيذ عملية النقل
+Route::post('institucions/{institucion}/transfer', [\App\Http\Controllers\InstitucionController::class, 'transferStore'])
+    ->name('institucions.transferstore');
+
+
+    
 
     // // routes/web.php
     // Route::get('/agents/performance/search', [App\Http\Controllers\insuranceperformance::class, 'searchForm'])
@@ -107,6 +143,17 @@ Route::get('/insurance-agents/create', [InsuranceAgentsController::class, 'creat
    Route::get('/municipals/by-city/{city}', [MunicipalController::class, 'byCity'])
      ->name('municipals.byCity');
     
+
+
+
+      //----------------------------cards-----------------------------------------------------------------       
+    Route::get('cards/index', [App\Http\Controllers\CardController::class, 'index'])->name('cards/index');
+    Route::get('cards/cardsetting', [App\Http\Controllers\CardController::class, 'editcard'])->name('cards/cardsetting');
+    Route::post('cards/index', [App\Http\Controllers\CardController::class, 'quary'])->name('cards/quary');
+    Route::post('cards/store/{id}', [App\Http\Controllers\CardController::class, 'store'])->name('cards/store');
+    Route::post('cards/printed/{id}', [App\Http\Controllers\CardController::class, 'printed'])->name('cards/printed');
+    Route::post('cards/allowPrint/{id}', [App\Http\Controllers\CardController::class, 'allowPrint'])->name('print_allowed');
+    // Route::post('cards/storesv/{id}', [App\Http\Controllers\Dashbord\CardController::class, 'storephotosave'])->name('cards/storesv');
 
 
 Auth::routes();
@@ -180,4 +227,7 @@ Route::post('/insurance-agents/{id}/deactivate', [InsuranceAgentsController::cla
 
 Route::patch('institucions/{institucion}/toggle-status', [\App\Http\Controllers\InstitucionController::class, 'toggleStatus'])
     ->name('institucions.toggle-status');
+
+  
+
 });

@@ -132,5 +132,12 @@ class Customer extends Model
     return $this->belongsTo(\App\Models\Subscription::class, 'subscription_id');
 }
 
+
+public function lastPhoto()
+{
+    return $this->hasOne(\App\Models\Personalphotos::class, 'customers_id')->latestOfMany();
+}
+
+
     
 }

@@ -108,7 +108,7 @@
                                     <span
                                         style="display:inline-flex;align-items:center;gap:6px;background:#F0F7FF;color:#1D4ED8;
                              border:1.5px solid #C7D2FE;border-radius:999px;padding:6px 12px;font-weight:800;">
-                                        👤 {{ $log->customer->name ?? '—' }}
+                                        👤 {{ $log->customer->regnumber ?? '—' }}
                                     </span>
                                 @else
                                     <span

@@ -5,6 +5,8 @@ use App\Models\beneficiariesCategories;
 use App\Models\beneficiariesSupCategories;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule; 
+use RealRashid\SweetAlert\Facades\Alert;
+
 
 
 class beneficiarieSupCategoryController extends Controller
@@ -26,24 +28,46 @@ class beneficiarieSupCategoryController extends Controller
         return view('beneficiaries_sup_categories.create', compact('mainCategories'));
     }
 
+   
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'name'   => ['required','string','max:255'],
-            'type'   => ['required','string','max:100'],
-            // أرقام فقط حتى 5 خانات
-            'code'   => ['required','string','regex:/^\d{1,5}$/','max:5',
-                         'unique:beneficiaries_sup_categories,code'],
-            'beneficiaries_categories_id' => ['required','exists:beneficiaries_categories,id'],
-            'status' => ['required', Rule::in([0,1])],
-        ], [
-            'code.regex' => ' يجب أن يكون أرقامًا فقط حتى  خانتين.',
-        ]);
-
-        beneficiariesSupCategories::create($data);
-
-        return redirect()->route('beneficiaries-sup-categories.index')
-            ->with('success','تم إضافة الفئة الفرعية بنجاح.');
+        try {
+            $data = $request->validate([
+                'name'   => ['required','string','max:255'],
+                'type'   => ['required','string','max:100'],
+                'code'   => [
+                    'required',
+                    'string',
+                    'regex:/^\d{1,5}$/',
+                    'max:5',
+                    'unique:beneficiaries_sup_categories,code'
+                ],
+                'beneficiaries_categories_id' => ['required','exists:beneficiaries_categories,id'],
+                'status' => ['required', Rule::in([0,1])],
+            ], [
+                'name.required'   => 'اسم الفئة مطلوب.',
+                'type.required'   => 'نوع الفئة مطلوب.',
+                'code.required'   => 'الرمز مطلوب.',
+                'code.regex'      => 'الرمز يجب أن يكون أرقامًا فقط حتى 5 خانات.',
+                'code.unique'     => 'هذا الرمز مستخدم بالفعل، يرجى إدخال رمز آخر.',
+                'beneficiaries_categories_id.required' => 'الفئة الرئيسية مطلوبة.',
+                'beneficiaries_categories_id.exists'   => 'الفئة الرئيسية غير موجودة.',
+                'status.required' => 'الحالة مطلوبة.',
+                'status.in'       => 'الحالة يجب أن تكون إما مفعلة أو غير مفعلة.',
+            ]);
+    
+            beneficiariesSupCategories::create($data);
+    
+            // ✅ أليرت نجاح
+            Alert::success('تمت العملية بنجاح', 'تم إضافة الفئة الفرعية.');
+    
+            return redirect()->route('beneficiaries-sup-categories.index');
+    
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // ✅ أليرت خطأ بالرسائل العربية
+            Alert::error('خطأ في الإدخال', implode(' | ', $e->validator->errors()->all()));
+            return back()->withErrors($e->validator)->withInput();
+        }
     }
 
     public function show($id)
@@ -61,7 +85,7 @@ class beneficiarieSupCategoryController extends Controller
 
     public function update(Request $request, $id)
     {
-        $item = beneficiariesCategories::findOrFail($id);
+        $item = beneficiariesSupCategories::findOrFail($id);
 
         $data = $request->validate([
             'name'   => ['required','string','max:255'],

@@ -118,15 +118,22 @@
                                 class="right-nav-text">{{ __(' تعديل بيانات مشترك/منتفع ') }}</span></a>
                     </li>
 
-                    <li>
+                    {{-- <li>
                         <a href="{{ route('agents.performance.index') }}"><i class="fas fa-exchange-alt"></i><span
                                 class="right-nav-text">{{ __(' التحويل من فئة لي فئة ') }}</span></a>
-                    </li>
+                    </li> --}}
 
 
                       <li>
                         <a href="{{ route('customers.lookup') }}"><i class="fas fa-exchange-alt"></i><span
                                 class="right-nav-text">{{ __('بدل فاقد ') }}</span></a>
+                    </li>
+
+
+
+                      <li>
+                        <a href="{{ route('cards/index') }}"><i class="fas fa-exchange-alt"></i><span
+                                class="right-nav-text">{{ __('تصوير مشترك / منتفع  ') }}</span></a>
                     </li>
 
 

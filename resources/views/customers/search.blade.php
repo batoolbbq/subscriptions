@@ -213,7 +213,7 @@
 
         {{-- عنوان الصفحة --}}
         <div class="mb-3 text-center">
-            <h3 class="page-title">   بحث عن مشترك / منتفع</h3>
+            <h3 class="page-title"> بحث عن مشترك / منتفع</h3>
             <div class="page-sub" style="color:#9ca3af;">املأ خانة واحدة فقط (الوطني أو التأميني أو الهاتف)</div>
         </div>
 
@@ -253,23 +253,24 @@
 
                 <form id="search-form" class="row g-3">
                     @csrf
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label class="form-label">الرقم الوطني</label>
                         <input type="text" name="nationalID" class="form-control" placeholder="مثال: 1XXXXXXXXXXXXXX">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label class="form-label">الرقم التأميني</label>
                         <input type="text" name="regnumber" class="form-control" placeholder="مثال: 13 رقم">
                     </div>
-                    <div class="col-md-4">
+                    {{-- <div class="col-md-4">
                         <label class="form-label">رقم الهاتف</label>
                         <input type="text" name="phone" class="form-control" placeholder="09XXXXXXXX">
-                    </div>
+                    </div> --}}
 
                     {{-- زر البحث في المنتصف --}}
-                    <div class="col-md-4 offset-md-4 mt-3">
-                        <button type="submit" class="btn" id="submitBtn">
-                            <span class="btn-text">بحث</span>
+                    <div class="col-12 mt-3 d-flex justify-content-center">
+                        <button type="submit" class="btn" id="submitBtn"
+                            style="width:auto; padding:0 150px; margin-right:0;">
+                            <span class="btn">بحث</span>
                             <span class="btn-spin d-none" style="margin-inline-start:8px">⏳</span>
                         </button>
                     </div>
@@ -455,83 +456,76 @@
                             `<div class="info-item"><label>رقم المعاش </label><div class="val">${c.insured_no}</div></div>`
                         );
 
+
                         // كارت الاشتراك
+
                         let subscriptionCard = '';
-                        if (c.subscription && (c.subscription.id || c.subscription.name || (c
-                                .subscription.values?.length))) {
-                            const s = c.subscription;
-                            subscriptionCard = `
-                            <div class="sub-card" style="margin-top:18px">
-                                <div class="sub-head">بيانات الاشتراك</div>
-                                <div class="sub-body">
-                                    <div class="info-grid" style="margin-bottom:14px">
-                                        <div class="info-item"><label>الاسم</label><div class="val">${val(s.name)}</div></div>
-                                        <div class="info-item"><label>الفئة</label><div class="val">${val(s.beneficiaries_category?.name)}</div></div>
-                                    </div>
-                                    <h6 style="font-weight:800;color:var(--ink);margin-bottom:8px"> نسب الاشتراك</h6>
-                                    ${
-                                        Array.isArray(s.values) && s.values.length
-                                        ? `<table class="sub-table">
-                                                                      <thead><tr><th>النوع</th><th>القيمة</th></tr></thead>
-                                                                         <tbody>
-                                                                           ${s.values.map(v => `
-                                                 <tr>
-                                                   <td>${val(v.type?.name)}</td>
-                                                   <td>${v.is_percentage ? val(v.value)+'%' : val(v.value)+' دينار'}</td>
-                                                 </tr>
-                                               `).join('')}
-                                                                         </tbody>
-                                                                       </table>`
-                                        : `<p style="color:var(--muted);margin:0">لا توجد قيم مسجلة</p>`
-                                    }
+                        @role('insurance-manager')
+                            if (c.subscription && (c.subscription.id || c.subscription.name || (c
+                                    .subscription.values?.length))) {
+                                const s = c.subscription;
+                                subscriptionCard = `
+                        <div class="sub-card" style="margin-top:18px">
+                            <div class="sub-head">بيانات الاشتراك</div>
+                            <div class="sub-body">
+                                <div class="info-grid" style="margin-bottom:14px">
+                                    <div class="info-item"><label>الاسم</label><div class="val">${val(s.name)}</div></div>
+                                    <div class="info-item"><label>الفئة</label><div class="val">${val(s.beneficiaries_category?.name)}</div></div>
                                 </div>
-                            </div>`;
-                        }
+                                <h6 style="font-weight:800;color:var(--ink);margin-bottom:8px"> نسب الاشتراك</h6>
+                                ${
+                                    Array.isArray(s.values) && s.values.length
+                                    ? `<table class="sub-table">
+                                                  <thead><tr><th>النوع</th><th>القيمة</th></tr></thead>
+                                                  <tbody>
+                                                    ${s.values.map(v => `
+                                                <tr>
+                                                    <td>${val(v.type?.name)}</td>
+                                                    <td>${v.is_percentage ? val(v.value)+'%' : val(v.value)+' دينار'}</td>
+                                                </tr>
+                                            `).join('')}
+                                                  </tbody>
+                                               </table>`
+                                    : `<p style="color:var(--muted);margin:0">لا توجد قيم مسجلة</p>`
+                                }
+                            </div>
+                        </div>
+                    `;
+                            }
+                        @endrole
 
                         // بطاقة بيانات المشترك
                         const html = `
-                        <div class="cardx" id="customer-card">
-                            <div class="cardx-header">
-                                <div class="title">بيانات المشترك</div>
-                                
-                          <div style="display:inline-flex; align-items:center; gap:6px;">
-                                <a href="/customers/${c.id}/print-one" target="_blank" 
-                                class="btn-brand no-print" style="padding:.45rem .9rem">طباعة بيانات</a>
-
-                                <a href="/customers/${c.id}/fakad" target="_blank" 
-                                class="btn-brand no-print" style="padding:.45rem .9rem">بدل فاقد</a>
-                            </div>
-
-
-                            </div>
-                            <div class="cardx-body">
-                                <div class="info-grid">
-                                    <div class="info-item"><label>رقم التأميني</label><div class="val">${val(c.regnumber)}</div></div>
-                                    <div class="info-item"><label>الاسم</label><div class="val">${val(c.fullnamea)}</div></div>
-
-                                    <div class="info-item"><label>الرقم الوطني</label><div class="val">${val(c.nationalID)}</div></div>
-                                    <div class="info-item"><label>الهاتف</label><div class="val">${val(c.phone)}</div></div>
-
-                                    <div class="info-item"><label>البريد</label><div class="val">${val(c.email)}</div></div>
-                                    <div class="info-item"><label>الجنس</label><div class="val">${c.gender == 1 ? 'ذكر' : (c.gender == 2 ? 'أنثى' : '—')}</div></div>
-                                    <div class="info-item"><label>اقرب نقطة </label><div class="val">${val(c.nearestpoint)}</div></div>
-
-                                    <div class="info-item"><label>تاريخ الميلاد</label><div class="val">${val(c.yearbitrh)}</div></div>
-                                    <div class="info-item"><label>رقم الجواز</label><div class="val">${val(c.passportnumber)}</div></div>
-                                    <div class="info-item"><label>الفئة الرئيسية</label><div class="val">${val(c.beneficiaries_category_relation?.name)}</div></div>
-                                    <div class="info-item"><label>الفئة الفرعية</label><div class="val">${val(c.beneficiaries_sup_category_relation?.name)}</div></div>
-                                    <div class="info-item"><label>الحالة الاجتماعية</label><div class="val">${val(c.socialstatuses?.name)}</div></div>
-                                    <div class="info-item"><label>فصيلة الدم</label><div class="val">${val(c.bloodtypes?.name)}</div></div>
-                                    <div class="info-item"><label>البلدية</label><div class="val">${val(c.municipals?.name)}</div></div>
-
-                                    <div class="info-item"><label>المنطقة الصحية</label><div class="val">${val(c.cities?.name)}</div></div>
-
-                                    ${optional.join('')}
-                                </div>
+                    <div class="cardx" id="customer-card">
+                        <div class="cardx-header">
+                            <div class="title">بيانات المشترك</div>
+                            <div style="display:inline-flex; align-items:center; gap:6px;">
+                                <a href="/customers/${c.id}/print-one" target="_blank" class="btn-brand no-print" style="padding:.45rem .9rem">طباعة بيانات</a>
                             </div>
                         </div>
-                        ${subscriptionCard}
-                    `;
+                        <div class="cardx-body">
+                            <div class="info-grid">
+                                <div class="info-item"><label>رقم التأميني</label><div class="val">${val(c.regnumber)}</div></div>
+                                <div class="info-item"><label>الاسم</label><div class="val">${val(c.fullnamea)}</div></div>
+                                <div class="info-item"><label>الرقم الوطني</label><div class="val">${val(c.nationalID)}</div></div>
+                                <div class="info-item"><label>الهاتف</label><div class="val">${val(c.phone)}</div></div>
+                                <div class="info-item"><label>البريد</label><div class="val">${val(c.email)}</div></div>
+                                <div class="info-item"><label>الجنس</label><div class="val">${c.gender == 1 ? 'ذكر' : (c.gender == 2 ? 'أنثى' : '—')}</div></div>
+                                <div class="info-item"><label>اقرب نقطة</label><div class="val">${val(c.nearestpoint)}</div></div>
+                                <div class="info-item"><label>تاريخ الميلاد</label><div class="val">${val(c.yearbitrh)}</div></div>
+                                <div class="info-item"><label>رقم الجواز</label><div class="val">${val(c.passportnumber)}</div></div>
+                                <div class="info-item"><label>الفئة الرئيسية</label><div class="val">${val(c.beneficiaries_category_relation?.name)}</div></div>
+                                <div class="info-item"><label>الفئة الفرعية</label><div class="val">${val(c.beneficiaries_sup_category_relation?.name)}</div></div>
+                                <div class="info-item"><label>الحالة الاجتماعية</label><div class="val">${val(c.socialstatuses?.name)}</div></div>
+                                <div class="info-item"><label>فصيلة الدم</label><div class="val">${val(c.bloodtypes?.name)}</div></div>
+                                <div class="info-item"><label>البلدية</label><div class="val">${val(c.municipals?.name)}</div></div>
+                                <div class="info-item"><label>المنطقة الصحية</label><div class="val">${val(c.cities?.name)}</div></div>
+                                ${optional.join('')}
+                            </div>
+                        </div>
+                    </div>
+                    ${subscriptionCard}
+                `;
                         resultBox.innerHTML = html;
                     })
                     .catch(err => {
@@ -546,24 +540,24 @@
             const card = document.getElementById('customer-card').innerHTML;
             const w = window.open('', '', 'width=900,height=650');
             w.document.write(`
-                <html>
-                  <head>
+            <html>
+                <head>
                     <title>طباعة بيانات المشترك</title>
                     <style>
-                      body{font-family:'Tajawal',sans-serif;direction:rtl}
-                      .info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-                      .info-item{border:1px solid #ddd;border-radius:10px;padding:10px;min-height:66px}
-                      .info-item label{color:#6b7280;font-size:.85rem;margin-bottom:6px;display:block}
-                      .info-item .val{font-weight:800;color:#1F2328}
-                      h3{color:#8C5346;text-align:center;margin-bottom:12px}
+                        body { font-family: 'Tajawal', sans-serif; direction: rtl }
+                        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px }
+                        .info-item { border: 1px solid #ddd; border-radius: 10px; padding: 10px; min-height: 66px }
+                        .info-item label { color: #6b7280; font-size:.85rem; margin-bottom:6px; display:block }
+                        .info-item .val { font-weight:800; color:#1F2328 }
+                        h3 { color: #8C5346; text-align:center; margin-bottom:12px }
                     </style>
-                  </head>
-                  <body>
+                </head>
+                <body>
                     <h3>بيانات المشترك</h3>
                     ${card}
-                  </body>
-                </html>
-            `);
+                </body>
+            </html>
+        `);
             w.document.close();
             w.focus();
             w.print();

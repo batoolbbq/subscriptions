@@ -3,6 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CardController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -15,11 +17,14 @@ use App\Http\Controllers\CustomerController;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-    // Route::post('/cra/family', [CraController::class, 'lookup'])->name('cra.lookup');
+// Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+//     return $request->user();
+//     // Route::post('/cra/family', [CraController::class, 'lookup'])->name('cra.lookup');
 
-});
+// });
 
 
-Route::post('/cra/family', [CustomerController::class, 'lookup'])->name('cra.lookup');
+Route::get('/customers', [CardController::class, 'indexApi']);
+
+
+

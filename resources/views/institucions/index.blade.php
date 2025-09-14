@@ -107,7 +107,6 @@
                                             <i class="fa fa-eye"></i> عرض
                                         </a>
                                         @if ($row->status === 0)
-
                                             <a href="{{ route('institucions.edit', $row) }}"
                                                 style="display:inline-flex;align-items:center;gap:6px;
                                                    background:#fff5e6;border:1.5px solid #F58220;color:#F58220;
@@ -115,6 +114,16 @@
                                                    font-size:14px;text-decoration:none;">
                                                 <i class="fa fa-edit"></i> تعديل
                                             </a>
+                                        @else
+                                            @role('insurance-manager')
+                                                   <a href="{{ route('institucions.edit', $row) }}"
+                                                style="display:inline-flex;align-items:center;gap:6px;
+                                                   background:#fff5e6;border:1.5px solid #F58220;color:#F58220;
+                                                   padding:6px 12px;border-radius:999px;font-weight:700;
+                                                   font-size:14px;text-decoration:none;">
+                                                <i class="fa fa-edit"></i> تعديل
+                                            </a>
+                                            @endrole
                                         @endif
                                     </div>
                                 </td>

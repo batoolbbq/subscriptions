@@ -62,11 +62,16 @@
                     </div>
 
                     <div class="mb-3">
-                        <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">النوع <span
-                                style="color:#ef4444;">*</span></label>
-                        <input type="text" name="type" class="form-control"
+                        <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
+                            النوع <span style="color:#ef4444;">*</span>
+                        </label>
+                        <select name="type" class="form-control"
                             style="width:100%;border:1.5px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
-                            value="{{ old('type') }}" maxlength="100" required>
+                            required>
+                            <option value="" disabled {{ old('type') ? '' : 'selected' }}>اختر النوع</option>
+                            <option value="مشترك" {{ old('type') == 'مشترك' ? 'selected' : '' }}>مشترك</option>
+                            <option value="منتفع" {{ old('type') == 'منتفع' ? 'selected' : '' }}>منتفع</option>
+                        </select>
                     </div>
 
                     <div class="mb-3">
