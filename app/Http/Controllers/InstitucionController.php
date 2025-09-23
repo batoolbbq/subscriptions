@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\AddedServiceService;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\InstitucionSheetImport;
+use RealRashid\SweetAlert\Facades\Alert;
+
 use Normalizer;   // <<< أضف هذا السطر
 
 
@@ -252,56 +254,134 @@ public function show(Institucion $institucion)
 
 
 
+    // public function update(Request $request, Institucion $institucion)
+    // {
+    //     $validated = $request->validate([
+    //         'name'               => ['required', 'string', 'max:255'],
+    //         'work_categories_id' => ['required', 'exists:work_categories,id'],
+    //         'subscriptions_id'   => ['required', 'exists:subscription33,id'],
+    //         'insurance_agent_id' => ['nullable', 'exists:insurance_agents,id'],
+    //         'status'             => ['nullable', 'integer'],
+
+    //         'commercial_number'  => [
+    //             'nullable','string','max:255',
+    //             Rule::unique('institucions', 'commercial_number')->ignore($institucion->id),
+    //         ],
+    //         'license_number'     => ['nullable','file','mimes:pdf,jpg,jpeg,png','max:5120'],
+    //         'commercial_record'  => ['nullable','file','mimes:pdf,jpg,jpeg,png','max:5120'],
+    //     ]);
+
+    //     $data = $validated;
+
+    //     $wcId = (int) $request->input('work_categories_id');
+    //     $autoMap = [
+    //         19 => 10, // 19 أو 21 → 10
+    //         21 => 11,
+    //         20 => 10, // 20 → 11
+    //     ];
+
+    //     // استبدال الملفات عند الرفع (بدون إجبار – الفيو يحدد متى تظهر)
+    //     if ($request->hasFile('license_number')) {
+    //         // حذف القديم إن وجد
+    //         if ($institucion->license_number && Storage::exists($institucion->license_number)) {
+    //             Storage::delete($institucion->license_number);
+    //         }
+    //         $data['license_number'] = $request->file('license_number')
+    //                                          ->store('public/institucions_files');
+    //     }
+
+    //     if ($request->hasFile('commercial_record')) {
+    //         if ($institucion->commercial_record && Storage::exists($institucion->commercial_record)) {
+    //             Storage::delete($institucion->commercial_record);
+    //         }
+    //         $data['commercial_record'] = $request->file('commercial_record')
+    //                                             ->store('public/institucions_files');
+    //     }
+
+    //     $institucion->update($data);
+
+    //     return redirect()->route('institucions.show', $institucion)
+    //         ->with('success', 'تم تعديل جهة العمل بنجاح');
+    // }
+
     public function update(Request $request, Institucion $institucion)
-    {
-        $validated = $request->validate([
-            'name'               => ['required', 'string', 'max:255'],
-            'work_categories_id' => ['required', 'exists:work_categories,id'],
-            'subscriptions_id'   => ['required', 'exists:subscription33,id'],
-            'insurance_agent_id' => ['nullable', 'exists:insurance_agents,id'],
-            'status'             => ['nullable', 'integer'],
+        {
+            $validated = $request->validate([
+                'name'               => ['required', 'string', 'max:255'],
+                'work_categories_id' => ['required', 'exists:work_categories,id'],
+                // 'subscriptions_id'   => ['required', 'exists:subscription33,id'],
+                'insurance_agent_id' => ['nullable', 'exists:insurance_agents,id'],
+                'status'             => ['nullable', 'integer'],
 
-            'commercial_number'  => [
-                'nullable','string','max:255',
-                Rule::unique('institucions', 'commercial_number')->ignore($institucion->id),
-            ],
-            'license_number'     => ['nullable','file','mimes:pdf,jpg,jpeg,png','max:5120'],
-            'commercial_record'  => ['nullable','file','mimes:pdf,jpg,jpeg,png','max:5120'],
-        ]);
+                'commercial_number'  => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                    Rule::unique('institucions', 'commercial_number')->ignore($institucion->id),
+                ],
+                'license_number'     => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+                'commercial_record'  => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+                'excel_sheet'        => ['nullable', 'file', 'mimes:xlsx,xls,csv', 'max:51200'],
+            ]);
 
-        $data = $validated;
+            $data = $validated;
 
-        $wcId = (int) $request->input('work_categories_id');
-        $autoMap = [
-            19 => 10, // 19 أو 21 → 10
-            21 => 11,
-            20 => 10, // 20 → 11
-        ];
-
-        // استبدال الملفات عند الرفع (بدون إجبار – الفيو يحدد متى تظهر)
-        if ($request->hasFile('license_number')) {
-            // حذف القديم إن وجد
-            if ($institucion->license_number && Storage::exists($institucion->license_number)) {
-                Storage::delete($institucion->license_number);
+            // استبدال الملفات عند الرفع
+            if ($request->hasFile('license_number')) {
+                if ($institucion->license_number && Storage::exists($institucion->license_number)) {
+                    Storage::delete($institucion->license_number);
+                }
+                $data['license_number'] = $request->file('license_number')
+                    ->store('public/institucions_files');
             }
-            $data['license_number'] = $request->file('license_number')
-                                             ->store('public/institucions_files');
-        }
 
-        if ($request->hasFile('commercial_record')) {
-            if ($institucion->commercial_record && Storage::exists($institucion->commercial_record)) {
-                Storage::delete($institucion->commercial_record);
+            if ($request->hasFile('commercial_record')) {
+                if ($institucion->commercial_record && Storage::exists($institucion->commercial_record)) {
+                    Storage::delete($institucion->commercial_record);
+                }
+                $data['commercial_record'] = $request->file('commercial_record')
+                    ->store('public/institucions_files');
             }
-            $data['commercial_record'] = $request->file('commercial_record')
-                                                ->store('public/institucions_files');
+
+            $institucion->update($data);
+
+            if ($request->hasFile('excel_sheet')) {
+                try {
+                    $importer = new \App\Imports\InstitucionSheetImport($institucion->id);
+                    Excel::import($importer, $request->file('excel_sheet'));
+
+                    // حفظ نسخة من الملف
+                    $f = $request->file('excel_sheet');
+                    $name = time() . '_excel_' . $f->getClientOriginalName();
+                    $f->move(public_path('institucions_files'), $name);
+
+                    // $institucion->update([
+                    //     'excel_path' => 'institucions_files/' . $name
+                    // ]);
+
+                    $msg = "تم تعديل جهة العمل بنجاح.<br>
+                    <strong>تمت إضافة {$importer->inserted} مشترك جديد</strong><br>
+                    <strong>وتحديث {$importer->updated} مشترك موجود</strong>";
+
+                    Alert::html('نجاح', $msg, 'success');
+
+
+
+                    return redirect()->route('institucions.show', $institucion);
+                } catch (\Throwable $e) {
+                    Alert::warning(
+                        'تنبيه',
+                        'تم تعديل جهة العمل، لكن حدث خطأ أثناء استيراد ملف الإكسل:<br>' . e($e->getMessage())
+                    )->html();
+
+                    return redirect()->route('institucions.show', $institucion);
+                }
+            }
+
+            // لا يوجد ملف إكسل — نجاح عادي
+            Alert::success('تم التعديل', 'تم تعديل جهة العمل بنجاح');
+            return redirect()->route('institucions.show', $institucion);
         }
-
-        $institucion->update($data);
-
-        return redirect()->route('institucions.show', $institucion)
-            ->with('success', 'تم تعديل جهة العمل بنجاح');
-    }
-
     public function destroy(Institucion $institucion)
     {
         // حذف الملفات المرتبطة (إن وجدت)

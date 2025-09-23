@@ -101,7 +101,7 @@ class CustomerController extends Controller
     public function registerCustomerByAdmin2()
     {
 
-        $customer = beneficiariesCategories::all();
+        $customer = beneficiariesCategories::whereIn('id', [1,7,8,9,12])->get();
         $workCategories  = WorkCategory::select('id', 'name')->orderBy('name')->get();
         $institucions    = Institucion::select('id', 'name', 'work_categories_id')->orderBy('name')->get();
 
@@ -1426,6 +1426,234 @@ class CustomerController extends Controller
         // النتيجة (13 رقم)
         return $prefix . $city . $gen . $year . $sup . $rand;
     }
+
+
+
+
+      public function getpendingCustomers()
+    {
+        $customers = Customer::where('active', 2)
+        ->get([
+            'subscription_id',
+            'iban',
+            'bank_branch_id',
+            'total_pension',
+            'account_no',
+            'institucion_id',
+            'bank_id',
+            'regnumber',
+            'uuid',
+            'nationalID',
+            'active',
+            'payment_status',
+            'municipals_id',
+            'fullnamea'
+        ]);     
+           return response()->json($customers);
+    }
+
+
+       public function getInactiveCustomers()
+    {
+        $customers = Customer::where('active', 0)->get();
+        return response()->json($customers);
+    }
+ 
+
+public function getpendingCustomerByUuid($uuid)
+{
+    $customer = Customer::where('uuid', $uuid)
+        ->where('active', 2)
+        ->first([
+            'subscription_id',
+            'iban',
+            'bank_branch_id',
+            'total_pension',
+            'account_no',
+            'institucion_id',
+            'bank_id',
+            'regnumber',
+            'uuid',
+            'nationalID',
+            'nid',
+            'active',
+            'payment_status',
+            'municipals_id',
+            'fullnamea'
+        ]);
+
+    if (!$customer) {
+        return response()->json(['message' => 'Customer not found or not active=2'], 404);
+    }
+
+    return response()->json($customer);
+}
+
+
+public function getInactiveCustomerByUuid($uuid)
+{
+    try {
+        $blocked = [
+            'subscription_id','iban','bank_branch_id','total_pension','pension_no',
+            'account_no','insured_no','institucion_id','institution_id','bank_id'
+        ];
+
+        $customer = Customer::where('uuid', $uuid)
+                            ->where('active', 0)
+                            ->with('lastPhoto')
+                            ->first();
+
+        if (!$customer) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Customer not found or not active=0'
+            ], 404);
+        }
+
+        // إخفاء الحقول غير المرغوبة
+        $customer->makeHidden($blocked);
+
+        // معالجة الصورة مثل indexApi
+        if ($customer->lastPhoto && $customer->lastPhoto->image) {
+            $customer->photo = asset('photo/personalphotos/' . $customer->lastPhoto->image . '.jpeg');
+        }
+        unset($customer->lastPhoto);
+
+        return response()->json([
+            'status' => true,
+            'data'   => $customer
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'status'  => false,
+            'message' => $e->getMessage(),
+        ], 500);
+    }
+}
+
+
+
+
+public function bulkActivateToTwo(Request $request)
+{
+    $request->validate([
+        'uuids'  => 'required|array',
+        'uuids.*' => 'exists:customers,uuid',
+    ]);
+
+    $updated = Customer::whereIn('uuid', $request->uuids)
+        ->where('active', 0)
+        ->update(['active' => 2]);
+
+    return response()->json([
+        'message' => "Updated status from 0 to 1 for {$updated} customers successfully"
+    ]);
+}
+
+
+public function activateToTwo($uuid)
+{
+    $customer = Customer::where('uuid', $uuid)->first();
+
+    if (!$customer) {
+        return response()->json(['message' => 'Customer not found'], 404);
+    }
+
+    if ($customer->active == 0) {
+        $customer->active = 2;
+        $customer->save();
+
+        return response()->json([
+            'message' => 'Customer status updated from 0 to 1 successfully',
+            'customer' => $customer
+        ]);
+    }
+
+    return response()->json([
+        'message' => 'Customer is not in state 0, so cannot change to 1'
+    ], 400);
+}
+
+
+public function activateAndPayment($uuid, Request $request)
+{
+    $request->validate([
+        'payment_status' => 'required|in:0,1', // نقبل فقط 0 أو 1
+    ]);
+
+    $customer = Customer::where('uuid', $uuid)->first();
+
+    if (!$customer) {
+        return response()->json(['message' => 'Customer not found'], 404);
+    }
+
+    $updated = false;
+
+    // تغيير active من 2 إلى 1
+    if ($customer->active == 2) {
+        $customer->active = 1;
+        $updated = true;
+    }
+
+    if ($customer->payment_status != $request->payment_status) {
+        $customer->payment_status = $request->payment_status;
+        $updated = true;
+    }
+
+    if ($updated) {
+        $customer->save();
+    }
+
+    return response()->json([
+        'message' => $updated 
+            ? 'Customer updated successfully' 
+            : 'No changes applied to customer',
+        'customer' => $customer
+    ]);
+}
+
+
+public function bulkActivateAndPayment(Request $request)
+{
+    $request->validate([
+        'uuids'  => 'required|array',
+        'uuids.*' => 'exists:customers,uuid',
+        'payment_status' => 'required|in:1,2',
+    ]);
+
+    $customers = Customer::whereIn('uuid', $request->uuids)->get();
+    $updatedCustomers = [];
+
+    foreach ($customers as $customer) {
+        $updated = false;
+
+        if ($customer->active == 2) {
+            $customer->active = 1;
+            $updated = true;
+        }
+
+        if ($customer->payment_status != $request->payment_status) {
+            $customer->payment_status = $request->payment_status;
+            $updated = true;
+        }
+
+        if ($updated) {
+            $customer->save();
+            $updatedCustomers[] = $customer;
+        }
+    }
+
+    return response()->json([
+        'message' => "Updated " . count($updatedCustomers) . " customers successfully",
+        'customers' => $updatedCustomers
+    ]);
+}
+
+
+
+
+
 
 
 

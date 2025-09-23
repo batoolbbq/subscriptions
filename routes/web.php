@@ -32,8 +32,8 @@ use Illuminate\Support\Facades\Validator;
 
 
 
-Route::get('/cities/send-to-api', [CityController::class, 'sendCitiesToApi'])
-    ->name('cities.sendToApi');
+// Route::get('/cities/send-to-api', [CityController::class, 'sendCitiesToApi'])
+//     ->name('cities.sendToApi');
 
 
 Route::resource('workplace_codes', \App\Http\Controllers\WorkplaceCodeController::class);

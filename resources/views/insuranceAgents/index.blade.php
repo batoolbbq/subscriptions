@@ -15,8 +15,7 @@
         </div>
 
         {{-- جدول البيانات --}}
-        <div
-            style="border:2px solid var(--line);border-radius:14px;
+        <div style="border:2px solid var(--line);
                 box-shadow:0 6px 20px rgba(17,24,39,.05);overflow:hidden;">
             <div class="table-responsive">
                 <table id="datatable1" class="table table-bordered table-hover table-custom" style="margin:0;">
@@ -60,10 +59,13 @@
             background: #faf3ef !important;
             border: 1.5px solid #f5cbaa !important;
             color: #92400E !important;
-            border-radius: 999px !important;
+            /* border-radius: 999px !important; */
             padding: 8px 16px !important;
             font-weight: 900 !important;
             margin: 2px !important;
+            margin-left: 14px !important;
+            /* ← مارجن يسار */
+
             display: inline-flex !important;
             align-items: center;
             gap: 6px;
@@ -72,7 +74,7 @@
         /* فلتر البحث */
         .dataTables_wrapper .dataTables_filter input {
             border: 1px solid #d1d5db;
-            border-radius: 8px;
+            /* border-radius: 8px; */
             padding: 6px 10px;
             margin-right: 6px;
             font-size: 14px;
@@ -170,11 +172,11 @@
                     }
                 ],
                 dom: '<"top d-flex justify-content-between"lfB>rtip',
-                buttons: [{
-                        extend: 'copyHtml5',
-                        text: '<i class="fa fa-copy"></i> نسخ',
-                        className: 'btn-light-brown'
-                    },
+                 buttons: [
+                //         extend: 'copyHtml5',
+                //         text: '<i class="fa fa-copy"></i> نسخ',
+                //         className: 'btn-light-brown'
+                //     },
                     {
                         extend: 'excelHtml5',
                         text: '<i class="fa fa-file-excel"></i> تصدير Excel',

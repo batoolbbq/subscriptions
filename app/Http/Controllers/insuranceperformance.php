@@ -13,8 +13,6 @@ use App\Models\insuranceAgents;
 use Illuminate\Support\Facades\DB;
 use App\Models\AddedServiceService;
 
-
-
 class insuranceperformance extends Controller
 {
 

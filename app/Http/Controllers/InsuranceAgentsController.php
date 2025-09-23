@@ -12,6 +12,10 @@ use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Validation\Rule;
+use RealRashid\SweetAlert\Facades\Alert;
+
+
 
 
 
@@ -324,11 +328,69 @@ public function deactivate($id)
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
-    {
-        //
+  public function update(Request $request, $id)
+{
+    // التحقق من صحة البيانات
+    $validatedData = $request->validate([
+        'name' => 'required|string|max:50',
+        'phone_number' => [
+            'required', 'string', 'digits:9',
+            'starts_with:92,91,94,21',
+            Rule::unique('insurance_agents')->ignore($id) // ✅ تجاهل الرقم الحالي
+        ],
+        'address' => 'required|string|max:150',
+        'email' => [
+            'required', 'email', 'max:50',
+            Rule::unique('insurance_agents', 'email')->ignore($id)
+        ],
+        'cities_id' => 'required',
+        'municipals_id' => 'required',
+        'description' => 'required',
+    ]);
 
+    $agent = insuranceAgents::findOrFail($id);
+    $agent->name = $validatedData['name'];
+    $agent->phone_number = $validatedData['phone_number'];
+    $agent->address = $validatedData['address'];
+    $agent->email = $validatedData['email'];
+    $agent->cities_id = $validatedData['cities_id'];
+    $agent->municipals_id = $validatedData['municipals_id'];
+    $agent->description = $validatedData['description'];
+
+    // تحديث الملفات إذا تم رفعها
+    if ($request->hasFile('Birth_creature')) {
+        $file      = $request->file('Birth_creature');
+        $ext       = $file->getClientOriginalExtension();
+        $fileName  = 'birth_certificate_' . Str::uuid() . '.' . $ext;
+        $file->move(public_path('insurancagents_files'), $fileName);
+        $agent->birth_certificate_path = $fileName;
     }
+
+    if ($request->hasFile('qualification')) {
+        $file      = $request->file('qualification');
+        $ext       = $file->getClientOriginalExtension();
+        $fileName  = 'qualification_' . Str::uuid() . '.' . $ext;
+        $file->move(public_path('insurancagents_files'), $fileName);
+        $agent->qualification_path = $fileName;
+    }
+
+    if ($request->hasFile('image')) {
+        $file      = $request->file('image');
+        $ext       = $file->getClientOriginalExtension();
+        $fileName  = 'location_image_' . Str::uuid() . '.' . $ext;
+        $file->move(public_path('insurancagents_files'), $fileName);
+        $agent->location_image_path = $fileName;
+    }
+
+    $agent->save();
+
+    // ✅ بعد التحديث رجع لصفحة الـ index
+
+    Alert::success('نجاح', 'تم تعديل بيانات الوكيل بنجاح!'); // ✅ السويت ألرت
+
+    return redirect()->route('insuranceAgents.index');
+}
+
 
     /**
      * Remove the specified resource from storage.

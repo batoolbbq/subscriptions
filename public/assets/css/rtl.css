@@ -30493,15 +30493,15 @@ textarea.form-control {
 
 /* أول زر يكون له زوايا يمين */
 .pagination .page-item:first-child .page-link {
-    border-top-right-radius: 6px;
-    border-bottom-right-radius: 6px;
+    /* border-top-right-radius: 6px; */
+    /* border-bottom-right-radius: 6px; */
 }
 
 /* آخر زر يكون له زوايا يسار */
 .pagination .page-item:last-child .page-link {
-    border-top-left-radius: 6px;
+    /* border-top-left-radius: 6px; */
         margin-left:12px;                /* نخليهم لاصقين */
-    border-bottom-left-radius: 6px;
+    /* border-bottom-left-radius: 6px; */
 }
 
 /* الزر النشط */

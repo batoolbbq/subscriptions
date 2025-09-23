@@ -2,8 +2,21 @@
 
 @section('title', 'تعديل بيانات وكيل التأمين')
 
+<meta name="municipals-url-template" content="{{ route('municipals.byCity', ['city' => 'CITY_ID__PLACEHOLDER']) }}">
+
+
 @section('css')
     {{-- خط + أيقونات --}}
+
+    <style>
+        input.form-control,
+        select.form-control,
+        textarea.form-control {
+            border-radius: 0px !important;
+            margin-bottom: 18px;
+        }
+    </style>
+
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 @endsection
@@ -93,7 +106,7 @@
                                 value="{{ old('phone_number', $agent->phone_number) }}" required
                                 onkeypress="return onlyNumberKey(event)">
                             <div style="color:#6b7280;font-size:13px;margin-top:6px;">اكتب 9 أرقام بدون صفر البداية (ينبغي
-                                أن يبدأ بـ 91/92/94/21)</div>
+                                أن يبدأ بـ 91/92/94)</div>
                             @error('phone_number')
                                 <div style="color:var(--red-700);font-size:13px;margin-top:6px;">{{ $message }}</div>
                             @enderror
@@ -270,7 +283,7 @@
                     style="all:unset;display:inline-flex;align-items:center;gap:8px;cursor:pointer;
                            background:var(--brand);color:#fff;padding:10px 18px;border-radius:999px;
                            font-weight:900;text-decoration:none;box-shadow:0 12px 26px rgba(245,130,32,.30);">
-                    <i class="fa-solid fa-floppy-disk"></i> حفظ التغييرات
+                    حفظ التغييرات
                 </button>
 
                 <a href="{{ route('insuranceAgents.index') }}"
@@ -285,57 +298,70 @@
     </div>
 @endsection
 
-@push('scripts')
-    <script>
-        function populateMunicipals(cityId, selectedId = null) {
-            const $municipal = $('#municipals_id');
-            $municipal.prop('disabled', true).empty()
-                .append('<option value="" disabled>جاري التحميل...</option>');
+{{-- @push('scripts') --}}
 
-            if (!cityId) {
-                return;
-            }
+<script>
+    function loadMunicipals(cityId, selectedMunicipalId = null) {
+        const municipalSelect = document.getElementById('municipals_id');
+        municipalSelect.disabled = true;
+        municipalSelect.innerHTML = '<option value="" selected>جاري التحميل...</option>';
 
-            $.ajax({
-                url: '/get-Municipal/' + cityId,
-                type: 'GET',
-                dataType: 'json',
-                success: function(data) {
-                    $municipal.empty().append('<option value="" disabled selected>اختر البلدية</option>');
-                    data.forEach(function(item) {
-                        const opt = $('<option/>', {
-                            value: item.id,
-                            text: item.name
-                        });
-                        if (selectedId && String(selectedId) === String(item.id)) {
-                            opt.attr('selected', 'selected');
-                        }
-                        $municipal.append(opt);
-                    });
-                    $municipal.prop('disabled', false);
+        if (!cityId) return;
+
+        const tpl = document.querySelector('meta[name="municipals-url-template"]').content;
+        const url = tpl.replace('CITY_ID__PLACEHOLDER', encodeURIComponent(cityId));
+
+        fetch(url, {
+                headers: {
+                    'Accept': 'application/json'
                 },
-                error: function() {
-                    $municipal.empty().append(
-                        '<option value="" disabled selected>حدث خطأ أثناء التحميل</option>');
+                cache: 'no-store'
+            })
+            .then(r => {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(data => {
+                municipalSelect.innerHTML = '<option value="" selected>اختر البلدية</option>';
+                if (Array.isArray(data) && data.length) {
+                    data.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item.id;
+                        opt.textContent = item.name;
+                        municipalSelect.appendChild(opt);
+                    });
+                    municipalSelect.disabled = false;
+
+                    // ✅ يحدد القيمة القديمة للبلدية
+                    if (selectedMunicipalId) {
+                        municipalSelect.value = selectedMunicipalId;
+                    }
+                } else {
+                    municipalSelect.innerHTML = '<option value="" selected>لا توجد بلديات متاحة</option>';
                 }
+            })
+            .catch(err => {
+                console.error('[Municipals] error:', err);
+                municipalSelect.innerHTML = '<option value="" selected>تعذر التحميل</option>';
             });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const citySelect = document.getElementById('cities_id');
+        const oldCity = "{{ old('cities_id', $agent->cities_id) }}";
+        const oldMunicipal = "{{ old('municipals_id', $agent->municipals_id) }}";
+
+        // إذا عندنا مدينة محفوظة نحمل بلدياتها
+        if (oldCity) {
+            citySelect.value = oldCity;
+            loadMunicipals(oldCity, oldMunicipal);
         }
 
-        $(document).ready(function() {
-            const currentCityId = '{{ old('cities_id', $agent->cities_id) }}';
-            const currentMunicipalId = '{{ old('municipals_id', $agent->municipals_id) }}';
-            if (currentCityId) {
-                populateMunicipals(currentCityId, currentMunicipalId);
-            }
-            $('#cities_id').on('change', function() {
-                populateMunicipals(this.value, null);
-            });
+        // عند تغيير المدينة نحمل بلديات جديدة
+        citySelect.addEventListener('change', function() {
+            loadMunicipals(this.value, null);
         });
+    });
+</script>
 
-        function onlyNumberKey(evt) {
-            var ASCIICode = (evt.which) ? evt.which : evt.keyCode;
-            if (ASCIICode > 31 && (ASCIICode < 48 || ASCIICode > 57)) return false;
-            return true;
-        }
-    </script>
-@endpush
+{{-- @endpush --}}
