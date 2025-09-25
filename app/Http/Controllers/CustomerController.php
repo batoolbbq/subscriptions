@@ -91,12 +91,12 @@ class CustomerController extends Controller
     // App\Http\Controllers\RegisterController.php
 
 
-    public function registerCustomerByAdmin()
-    {
+    // public function registerCustomerByAdmin()
+    // {
 
-        $beneficiariesSupCategories = beneficiariesSupCategories::where('beneficiaries_categories_id', 1)->get();
-        return view('frontend.registerCustomer', ['beneficiariesSupCategories' => $beneficiariesSupCategories]);
-    }
+    //     $beneficiariesSupCategories = beneficiariesSupCategories::where('beneficiaries_categories_id', 1)->get();
+    //     return view('frontend.registerCustomer', ['beneficiariesSupCategories' => $beneficiariesSupCategories]);
+    // }
 
     public function registerCustomerByAdmin2()
     {
@@ -113,12 +113,12 @@ class CustomerController extends Controller
     }
 
 
-    public function RegisterBeneficiary()
-    {
+    // public function RegisterBeneficiary()
+    // {
 
-        $beneficiariesSupCategories = beneficiariesSupCategories::where('beneficiaries_categories_id', 2)->get();
-        return view('frontend.RegisterBeneficiary.index', ['beneficiariesSupCategories' => $beneficiariesSupCategories]);
-    }
+    //     $beneficiariesSupCategories = beneficiariesSupCategories::where('beneficiaries_categories_id', 2)->get();
+    //     return view('frontend.RegisterBeneficiary.index', ['beneficiariesSupCategories' => $beneficiariesSupCategories]);
+    // }
 
 
 
@@ -677,126 +677,82 @@ class CustomerController extends Controller
 
 
 
-    public function test(Request $request)
-    {
-        $nationalId         = $request->nationalID;
-        $registryNumber     = $request->family_registry_no;
-        $phone              = $request->phone;
-        $benefCat           = (string) $request->beneficiariesSupCategories;
-        $institutionId      = $request->institution_id;
-        $otpInput           = $request->otp;
+     public function test(Request $request)
+        {
+            $nationalId         = $request->nationalID;
+            $registryNumber     = $request->family_registry_no;
+            $phone              = $request->phone;
+            $benefCat           = (string) $request->beneficiariesSupCategories;
+            $institutionId      = $request->institution_id;
+            $otpInput           = $request->otp;
 
-        // نوع المشترك: husband | wife | single
-        $subscriberType     = $request->subscriber_type;
-        $spouseNationalId   = $request->spouse_national_id;
+            // نوع المشترك: husband | wife | single
+            $subscriberType     = $request->subscriber_type;
+            $spouseNationalId   = $request->spouse_national_id;
 
-        // لو زوجة: لازم رقم الزوج
-        if ($subscriberType === 'wife' && empty($spouseNationalId)) {
-            return back()->withErrors([
-                'spouse_national_id' => 'يجب إدخال الرقم الوطني للزوج عند اختيار (زوجة).'
-            ])->withInput();
-        }
-
-        // تحقق من الهاتف (فريد)
-        if ($phone && \App\Models\Customer::where('phone', $phone)->exists()) {
-            return back()->withErrors(['phone' => 'رقم الهاتف مسجل مسبقاً'])->withInput();
-        }
-
-        // تحقق من OTP
-        $ve = \App\Models\Verification::where('phone', $phone)->first();
-        if (!$ve) {
-            return back()->withErrors(['otp' => 'لم يتم إرسال رمز تحقق لهذا الرقم'])->withInput();
-        }
-
-        // الوقت المسموح = otp_time + 3 دقائق
-        $expiresAt = Carbon::parse($ve->otp_time)->addMinutes(3);
-        if (now()->gt($expiresAt)) {
-            return back()->withErrors(['otp' => 'انتهت صلاحية رمز التحقق'])->withInput();
-        }
-        if ($ve->otp != $otpInput) {
-            return back()->withErrors(['otp' => 'رمز التحقق غير صحيح'])->withInput();
-        }
-
-
-        $craOk         = false;
-        $craMain       = null;
-        $craDependents = collect();
-        $craCount      = 0;
-
-        try {
-            // 1) تسجيل الدخول لجلب التوكن
-            $login = Http::withOptions([
-                'verify' => false,
-                'timeout' => 30,
-                'connect_timeout' => 30,
-            ])
-                ->post('http://10.110.110.90/api/login-api?email=cra@phif.gov.ly&password=cra%23@PasS');
-
-            if (!$login->successful()) {
+            // لو زوجة: لازم رقم الزوج
+            if ($subscriberType === 'wife' && empty($spouseNationalId)) {
                 return back()->withErrors([
-                    'nationalID' => 'Login failed: HTTP ' . $login->status(),
+                    'spouse_national_id' => 'يجب إدخال الرقم الوطني للزوج عند اختيار (زوجة).'
                 ])->withInput();
             }
 
-            $token = data_get($login->json(), 'token');
-            if (!$token) {
-                return back()->withErrors([
-                    'nationalID' => 'Login response has no token',
-                ])->withInput();
+            // تحقق من الهاتف (فريد)
+            if ($phone && \App\Models\Customer::where('phone', $phone)->exists()) {
+                return back()->withErrors(['phone' => 'رقم الهاتف مسجل مسبقاً'])->withInput();
             }
 
-            $fetchWithEnglish = function (string $natId, string $regNo) use ($token) {
-                $resp = Http::withOptions([
-                    'verify' => false,
-                    'timeout' => 60,
-                    'connect_timeout' => 30,
-                ])
-                    ->withToken($token)
-                    ->post('http://10.110.110.90/api/Phif-cra', [
-                        'NationalID'     => $natId,
-                        'RegistryNumber' => $regNo,
-                    ]);
+            // تحقق من OTP
+            $ve = \App\Models\Verification::where('phone', $phone)->first();
+            if (!$ve) {
+                return back()->withErrors(['otp' => 'لم يتم إرسال رمز تحقق لهذا الرقم'])->withInput();
+            }
 
-                if (!$resp->successful()) {
-                    throw new \Exception("CRA call failed: HTTP " . $resp->status());
-                }
+            $expiresAt = Carbon::parse($ve->otp_time)->addMinutes(3);
+            if (now()->gt($expiresAt)) {
+                return back()->withErrors(['otp' => 'انتهت صلاحية رمز التحقق'])->withInput();
+            }
+            if ($ve->otp != $otpInput) {
+                return back()->withErrors(['otp' => 'رمز التحقق غير صحيح'])->withInput();
+            }
 
-                $json = $resp->json();
-                if (!$json || !data_get($json, 'status')) {
-                    throw new \Exception("CRA response invalid");
-                }
+            $craOk         = false;
+            $craMain       = null;
+            $craDependents = collect();
+            $craCount      = 0;
 
-                $members = collect(data_get($json, 'data.members', []));
+            try {
+                // ======================================================
+                // 👇 لو المشترك أعزب نستعمل فقط API getnidinfo/{natId}
+                // ======================================================
+                if ($subscriberType === 'single') {
+                    $resp = Http::withOptions([
+                        'verify' => false,
+                        'timeout' => 20,
+                        'connect_timeout' => 10,
+                    ])->get("https://test.phif.gov.ly/getnidinfo/" . $nationalId);
 
-                $normalized = $members->map(function ($m) {
-                    $birthRaw = data_get($m, 'birthDate');
-                    $birth    = $birthRaw ? explode('T', $birthRaw)[0] : null;
-                    return [
-                        'nationalID'   => data_get($m, 'nationalID'),
-                        'name'         => trim((data_get($m, 'arabicFirstName') . ' ' . data_get($m, 'arabicFatherName') . ' ' . data_get($m, 'arabicGrandFatherName') . ' ' . data_get($m, 'arabicFamilyName'))),
-                        'mother'       => data_get($m, 'arabicMotherName'),
-                        'birthDate'    => $birth,
-                        'birthPlace'   => data_get($m, 'birthPlace'),
-                        'gender'       => (data_get($m, 'gender') == 0 ? 'ذكر' : 'أنثى'),
-                        'isAlive'      => (data_get($m, 'isALive') === 'Y'),
-                        'relationship' => data_get($m, 'relationship'), // 1=زوج، 2=زوجة، 3=ابن/ابنة (حسب نظامكم)
-                        'status'       => data_get($m, 'status'),
-                        'name_en'      => null,
-                    ];
-                });
+                    if (!$resp->successful()) {
+                        return back()->withErrors(['nationalID' => 'تعذر جلب البيانات من النظام'])->withInput();
+                    }
 
-                $withEn = $normalized->map(function ($item) {
+                    $json = $resp->json();
+                    if (!$json || !isset($json['nationalID'])) {
+                        return back()->withErrors(['nationalID' => 'لم يتم العثور على بيانات لهذا الرقم الوطني'])->withInput();
+                    }
+
+                    // 👇 نحاول نجيب الاسم بالإنجليزي من API ثاني
+                    $nameEn = null;
                     try {
                         $respEn = Http::withOptions([
                             'verify' => false,
                             'timeout' => 10,
                             'connect_timeout' => 10,
-                        ])
-                            ->get("https://test.phif.gov.ly/getnidinfoEN/" . $item['nationalID']);
+                        ])->get("https://test.phif.gov.ly/getnidinfoEN/" . $nationalId);
 
                         if ($respEn->successful()) {
                             $enData = $respEn->json();
-                            $item['name_en'] = trim(
+                            $nameEn = trim(
                                 ($enData['FirstNameEn'] ?? '') . ' ' .
                                     ($enData['FatherNameEn'] ?? '') . ' ' .
                                     ($enData['GrandFatherNameEn'] ?? '') . ' ' .
@@ -804,150 +760,199 @@ class CustomerController extends Controller
                             );
                         }
                     } catch (\Throwable $e) {
-                        $item['name_en'] = null;
-                    }
-                    return $item;
-                });
-
-                return $withEn;
-            };
-
-            $filterChildren = function (\Illuminate\Support\Collection $collection) {
-                return $collection->filter(function ($item) {
-                    if ((int)$item['relationship'] !== 3) return false;
-                    if (empty($item['birthDate']))   return false;
-
-                    $age = Carbon::parse($item['birthDate'])->age;
-                    if ($item['gender'] === 'أنثى') {
-                        // return $age <= 25;
-                    } else { // ذكر
-                        return $age <= 25;
-                    }
-                })->values();
-            };
-
-
-            if ($subscriberType === 'wife') {
-
-                $wifeData = $fetchWithEnglish($nationalId, $registryNumber);
-                $craMain  = $wifeData->firstWhere('nationalID', $nationalId);
-
-
-                $husbandData   = $fetchWithEnglish($spouseNationalId, $registryNumber);
-                $craDependents = $filterChildren($husbandData);
-
-                $craCount = 1 + $craDependents->count();
-            } elseif ($subscriberType === 'husband') {
-
-                $normalized    = $fetchWithEnglish($nationalId, $registryNumber);
-                $craMain       = $normalized->firstWhere('nationalID', $nationalId);
-
-
-                $craDependents = $normalized->filter(function ($item) use ($nationalId) {
-
-                    if ($item['nationalID'] == $nationalId) return false;
-
-
-                    if ((int)$item['relationship'] === 2) return true;
-
-
-                    if ((int)$item['relationship'] === 3 && !empty($item['birthDate'])) {
-                        $age = Carbon::parse($item['birthDate'])->age;
-                        if ($item['gender'] === 'أنثى' && $age <= 25) return true;
-                        if ($item['gender'] === 'ذكر'  && $age <= 18) return true;
+                        $nameEn = null;
                     }
 
-                    return false;
-                })->values();
+                    $craMain = [
+                        'nationalID'   => $json['nationalID'] ?? null,
+                        'name'         => trim(($json['firstName'] ?? '') . ' ' . ($json['fatherName'] ?? '') . ' ' . ($json['grandFatherName'] ?? '') . ' ' . ($json['surName'] ?? '')),
+                        'name_en'      => $nameEn,
+                        'mother'       => null,
+                        'birthDate'    => $json['birthDate'] ? explode('T', $json['birthDate'])[0] : null,
+                        'birthPlace'   => $json['birthPlace'] ?? null,
+                        'gender'       => null,
+                        'isAlive'      => (bool)($json['isLife'] ?? true),
+                        'relationship' => null,
+                        'status'       => null,
+                    ];
+                    $craDependents = collect();
+                    $craCount      = 1;
+                    $craOk         = true;
+                } else {
+                    // ======================================================
+                    // 👇 باقي الحالات (husband / wife) نستعمل CRA API
+                    // ======================================================
+                    $login = Http::withOptions([
+                        'verify' => false,
+                        'timeout' => 30,
+                        'connect_timeout' => 30,
+                    ])->post('http://10.110.110.90/api/login-api?email=cra@phif.gov.ly&password=cra%23@PasS');
 
-                $craCount = 1 + $craDependents->count();
-            } else {
-                $normalized    = $fetchWithEnglish($nationalId, $registryNumber);
-                $craMain       = $normalized->firstWhere('nationalID', $nationalId);
-                $craDependents = $filterChildren($normalized);
-                $craCount      = 1 + $craDependents->count();
-            }
+                    if (!$login->successful()) {
+                        return back()->withErrors([
+                            'nationalID' => 'Login failed: HTTP ' . $login->status(),
+                        ])->withInput();
+                    }
 
-            $craOk = true;
+                    $token = data_get($login->json(), 'token');
+                    if (!$token) {
+                        return back()->withErrors([
+                            'nationalID' => 'Login response has no token',
+                        ])->withInput();
+                    }
 
-            $RETIREES_IDS = [1];
+                    $fetchWithEnglish = function (string $natId, string $regNo) use ($token) {
+                        $resp = Http::withOptions([
+                            'verify' => false,
+                            'timeout' => 60,
+                            'connect_timeout' => 30,
+                        ])->withToken($token)->post('http://10.110.110.90/api/Phif-cra', [
+                            'NationalID'     => $natId,
+                            'RegistryNumber' => $regNo,
+                        ]);
 
-            $benefCatInt = (int) $benefCat;
-            $isRetireeSelected = in_array($benefCatInt, $RETIREES_IDS, true);
+                        if (!$resp->successful()) {
+                            throw new \Exception("CRA call failed: HTTP " . $resp->status());
+                        }
 
-            $mainBirth  = $craMain['birthDate'] ?? null;   // تاريخ ميلاد المشترك الرئيسي
-            $mainGender = $craMain['gender']    ?? null;   // 'ذكر' أو 'أنثى'
+                        $json = $resp->json();
+                        if (!$json || !data_get($json, 'status')) {
+                            throw new \Exception("CRA response invalid");
+                        }
 
-            if ($mainBirth) {
-                $mainAge = \Carbon\Carbon::parse($mainBirth)->age;
+                        $members = collect(data_get($json, 'data.members', []));
+                        $normalized = $members->map(function ($m) {
+                            $birthRaw = data_get($m, 'birthDate');
+                            $birth    = $birthRaw ? explode('T', $birthRaw)[0] : null;
+                            return [
+                                'nationalID'   => data_get($m, 'nationalID'),
+                                'name'         => trim((data_get($m, 'arabicFirstName') . ' ' . data_get($m, 'arabicFatherName') . ' ' . data_get($m, 'arabicGrandFatherName') . ' ' . data_get($m, 'arabicFamilyName'))),
+                                'mother'       => data_get($m, 'arabicMotherName'),
+                                'birthDate'    => $birth,
+                                'birthPlace'   => data_get($m, 'birthPlace'),
+                                'gender'       => (data_get($m, 'gender') == 0 ? 'ذكر' : 'أنثى'),
+                                'isAlive'      => (data_get($m, 'isALive') === 'Y'),
+                                'relationship' => data_get($m, 'relationship'),
+                                'status'       => data_get($m, 'status'),
+                                'name_en'      => null,
+                            ];
+                        });
 
-                if ($mainGender === 'ذكر' && $mainAge > 64 && !$isRetireeSelected) {
-                    return back()->withErrors([
-                        'beneficiariesSupCategories' => 'المشترك عمره أكبر من 64 سنة. الرجاء اختيار فئة المتقاعدين.'
-                    ])->withInput();
+                        // 👇 نكمل بالإنجليزي
+                        $withEn = $normalized->map(function ($item) {
+                            try {
+                                $respEn = Http::withOptions([
+                                    'verify' => false,
+                                    'timeout' => 10,
+                                    'connect_timeout' => 10,
+                                ])->get("https://test.phif.gov.ly/getnidinfoEN/" . $item['nationalID']);
+
+                                if ($respEn->successful()) {
+                                    $enData = $respEn->json();
+                                    $item['name_en'] = trim(
+                                        ($enData['FirstNameEn'] ?? '') . ' ' .
+                                            ($enData['FatherNameEn'] ?? '') . ' ' .
+                                            ($enData['GrandFatherNameEn'] ?? '') . ' ' .
+                                            ($enData['SurNameEn'] ?? '')
+                                    );
+                                }
+                            } catch (\Throwable $e) {
+                                $item['name_en'] = null;
+                            }
+                            return $item;
+                        });
+
+                        return $withEn;
+                    };
+
+                    if ($subscriberType === 'wife') {
+                        $wifeData = $fetchWithEnglish($nationalId, $registryNumber);
+                        $craMain  = $wifeData->firstWhere('nationalID', $nationalId);
+
+                        $husbandData   = $fetchWithEnglish($spouseNationalId, $registryNumber);
+                        $craDependents = $husbandData->filter(fn($m) => (int)$m['relationship'] === 3)->values();
+
+                        $craCount = 1 + $craDependents->count();
+                    } elseif ($subscriberType === 'husband') {
+                        $normalized    = $fetchWithEnglish($nationalId, $registryNumber);
+                        $craMain       = $normalized->firstWhere('nationalID', $nationalId);
+
+                        $craDependents = $normalized->filter(function ($item) use ($nationalId) {
+                            if ($item['nationalID'] == $nationalId) return false;
+                            if ((int)$item['relationship'] === 2) return true;
+                            if ((int)$item['relationship'] === 3 && !empty($item['birthDate'])) {
+                                $age = Carbon::parse($item['birthDate'])->age;
+                                if ($item['gender'] === 'أنثى' && $age <= 25) return true;
+                                if ($item['gender'] === 'ذكر'  && $age <= 18) return true;
+                            }
+                            return false;
+                        })->values();
+
+                        $craCount = 1 + $craDependents->count();
+                    }
+                    $craOk = true;
                 }
 
-                if ($mainGender === 'أنثى' && $mainAge > 60 && !$isRetireeSelected) {
-                    return back()->withErrors([
-                        'beneficiariesSupCategories' => 'المشتركة عمرها أكبر من 60 سنة. الرجاء اختيار فئة المتقاعدين.'
-                    ])->withInput();
+                // تحقق العمر لو أكبر من الحد ولم يختار متقاعدين
+                $RETIREES_IDS = [1];
+                $benefCatInt = (int)$benefCat;
+                $isRetireeSelected = in_array($benefCatInt, $RETIREES_IDS, true);
+
+                $mainBirth  = $craMain['birthDate'] ?? null;
+                $mainGender = $craMain['gender']    ?? null;
+
+                if ($mainBirth) {
+                    $mainAge = Carbon::parse($mainBirth)->age;
+                    if ($mainGender === 'ذكر' && $mainAge > 64 && !$isRetireeSelected) {
+                        return back()->withErrors([
+                            'beneficiariesSupCategories' => 'المشترك عمره أكبر من 64 سنة. الرجاء اختيار فئة المتقاعدين.'
+                        ])->withInput();
+                    }
+                    if ($mainGender === 'أنثى' && $mainAge > 60 && !$isRetireeSelected) {
+                        return back()->withErrors([
+                            'beneficiariesSupCategories' => 'المشتركة عمرها أكبر من 60 سنة. الرجاء اختيار فئة المتقاعدين.'
+                        ])->withInput();
+                    }
                 }
+            } catch (\Throwable $e) {
+                return back()->withErrors([
+                    'nationalID' => 'Exception: ' . $e->getMessage(),
+                ])->withInput();
             }
-        } catch (\Throwable $e) {
-            return back()->withErrors([
-                'nationalID' => 'Exception: ' . $e->getMessage(),
-            ])->withInput();
+
+            // =========================
+            // B) مطابقة الشِّيت (لفئات 7 أو 8 فقط)
+            // =========================
+            $sheetMatch       = null;
+            $needsInstitution = in_array($benefCat, ['7', '8'], true);
+
+            if ($needsInstitution) {
+                $sheetMatch = \App\Models\InstitucionSheetRow::where('national_id', $nationalId)
+                    ->where('institucion_id', $institutionId)
+                    ->first();
+            }
+
+            // التحويل للخطوة الثانية
+            return redirect()->route('customers.register.step2')->with([
+                'cra_ok'         => $craOk,
+                'cra_main'       => $craMain,
+                'cra_dependents' => $craDependents,
+                'cra_count'      => $craCount,
+                'phone'          => $phone,
+                'registryNumber' => $registryNumber,
+                'subscriber_type' => $subscriberType,
+                'spouse_id'      => $spouseNationalId,
+                'beneficiariesCategoriesId'  => $request->beneficiariesCategories,
+                'beneficiariesSupCategories' => $benefCat,
+                'institution_id'             => $institutionId,
+                'verified_ok'    => $craOk && ($needsInstitution ? (bool)$sheetMatch : true),
+                'sheetMatch'     => $sheetMatch,
+                'insured_no'     => $sheetMatch?->insured_no,
+                'pension_no'     => $sheetMatch?->pension_no,
+                'account_no'     => $sheetMatch?->account_no,
+                'total_pension'  => $sheetMatch?->total_pension,
+            ]);
         }
-
-        // =========================
-        // B) مطابقة الشِّيت (لفئات 7 أو 8 فقط)
-        // =========================
-        $sheetMatch       = null;
-        $needsInstitution = in_array($benefCat, ['7', '8'], true);
-
-        if ($needsInstitution) {
-            $sheetMatch = \App\Models\InstitucionSheetRow::where('national_id', $nationalId)
-                ->where('institucion_id', $institutionId)
-                ->first();
-
-            // if (!$sheetMatch) {
-            //     $existsNat = \App\Models\InstitucionSheetRow::where('national_id', $nationalId)->exists();
-            //     return back()->withErrors([
-            //         'institution_id' => $existsNat
-            //             ? 'تم العثور على الرقم الوطني في الشيت لكنه مرتبط بجهة عمل مختلفة'
-            //             : 'لم يتم العثور على بيانات مطابقة في الشيت (الرقم الوطني + جهة العمل)'
-            //     ])->withInput();
-            // }
-        }
-
-        // التحويل للخطوة الثانية
-        return redirect()->route('customers.register.step2')->with([
-            // CRA
-            'cra_ok'         => $craOk,
-            'cra_main'       => $craMain,
-            'cra_dependents' => $craDependents,
-            'cra_count'      => $craCount,
-
-            // مدخلات إضافية مطلوبة لاحقًا
-            'phone'          => $phone,
-            'registryNumber' => $registryNumber,
-            'subscriber_type' => $subscriberType,
-            'spouse_id'      => $spouseNationalId,
-
-            // الفئات/الجهة
-            'beneficiariesCategoriesId'  => $request->beneficiariesCategories, // لو عندك هذا الحقل
-            'beneficiariesSupCategories' => $benefCat,
-            'institution_id'             => $institutionId,
-
-            // نتيجة الشِّيت
-            'verified_ok'    => $craOk && ($needsInstitution ? (bool)$sheetMatch : true),
-            'sheetMatch'     => $sheetMatch,
-            'insured_no'     => $sheetMatch?->insured_no,
-            'pension_no'     => $sheetMatch?->pension_no,
-            'account_no'     => $sheetMatch?->account_no,
-            'total_pension'  => $sheetMatch?->total_pension,
-        ]);
-    }
 
 
     public function sendOtps(Request $request)
@@ -1244,12 +1249,13 @@ class CustomerController extends Controller
                     throw new \Exception("تعذر تحديد الفئة الفرعية للمشترك");
                 }
 
-                $regnumberMain = $this->generateRegNumber(
-                    $benefCatId,
-                    $cityCode,
-                    $main['gender'] ?? null,
-                    $main['birthDate'] ?? null,
-                    $supMain->code
+               $regnumberMain = $this->generateRegNumber(
+                $benefCatId,
+                $cityCode,
+                $main['gender'] ?? null,
+                $main['birthDate'] ?? null
+
+
                 );
 
                 $insuredNo    = $main['insured_no']    ?? null;
@@ -1340,12 +1346,12 @@ class CustomerController extends Controller
 
                         foreach ($dependents as $dep) {
                             $regnumberDep = $this->generateRegNumber(
-                                $benefCatId,
-                                $dep['cities_id'] ?? null,
-                                $dep['gender'] ?? null,
-                                $dep['birthDate'] ?? null,
-                                $supDep->code
-                            );
+                            $benefCatId,
+                            $dep['cities_id'] ?? null,
+                            $dep['gender'] ?? null,
+                            $dep['birthDate'] ?? null
+                             );
+
 
                             $dependent = new Customer();
                             $dependent->requesttypes_id = 1;
@@ -1371,6 +1377,7 @@ class CustomerController extends Controller
                             $dependent->cities_id = $dep['cities_id'];
                             $dependent->socialstatuses_id = $dep['socialstatuses_id'];
                             $dependent->diseasestate = $dep['diseasestate'] ?? null;
+                            $dependent->main_customer_id = $customerId;
 
                             // إن احتجت تربط المؤسسة/الاشتراك للمنتفعين، فعّل السطور التالية:
                             // $dependent->institucion_id  = $request->input('institutionId');
@@ -1403,29 +1410,33 @@ class CustomerController extends Controller
     }
 
 
-    protected function generateRegNumber($benefCatId, $cityCode, $gender, $yearBirth, $supCode)
-    {
-        // أول رقمين من الفئة
-        $prefix = str_pad($benefCatId, 2, '0', STR_PAD_LEFT);
+   protected function generateRegNumber($benefCatId, $cityCode, $gender, $yearBirth)
+{
+    // الخانة الأولى ثابتة
+    $first = '0';
 
-        // كود المدينة (id)
-        $city = str_pad($cityCode ?? 0, 1, '0', STR_PAD_LEFT);
+    // الخانتين الثانية والثالثة حسب الفئة
+    $cat = $benefCatId == 1 ? '00' : '01';
 
-        // الجندر (1 أو 2)
-        $gen = $gender == 'أنثى' || $gender == 2 ? 2 : 1;
+    // المدينة (خانة واحدة فقط)
+    $city = str_pad($cityCode ?? 0, 1, '0', STR_PAD_LEFT);
 
-        // آخر رقمين من سنة الميلاد
-        $year = $yearBirth ? substr($yearBirth, -2) : '00';
+    // الجندر
+    $gen = ($gender == 'أنثى' || $gender == 2) ? 2 : 1;
 
-        // كود الفئة الفرعية
-        $sup = str_pad($supCode, 2, '0', STR_PAD_LEFT);
+    // آخر رقمين من سنة الميلاد
+    $year = $yearBirth ? substr($yearBirth, -2) : '00';
 
-        // 5 أرقام عشوائية
-        $rand = random_int(10000, 99999);
+    // الخانة الثامنة ثابتة
+    $fixed = '1';
 
-        // النتيجة (13 رقم)
-        return $prefix . $city . $gen . $year . $sup . $rand;
-    }
+    // 5 أرقام عشوائية
+    $rand = random_int(10000, 99999);
+
+    // النتيجة (13 خانة)
+    return $first . $cat . $city . $gen . $year . $fixed . $rand;
+}
+
 
 
 
@@ -2380,15 +2391,16 @@ protected function normalizePhone($p)
 
 
 
-     public function show($id)
-        {
-            $customer = Customer::findOrFail($id);
-            $dependents = Customer::where('registrationnumbers', $customer->registrationnumbers)
-                ->where('id', '!=', $customer->id)
-                ->get();
+    public function show($id)
+{
+    $customer = Customer::with('dependents')->findOrFail($id);
 
-            return view('customers.show', compact('customer', 'dependents'));
-        }
+    return view('customers.show', [
+        'customer'   => $customer,
+        'dependents' => $customer->dependents,
+    ]);
+}
+
 
 
     public function printOne(Customer $customer)
@@ -2513,41 +2525,51 @@ protected function logReplacementIfFirstIn30Days(Customer $customer, int $servic
 
 
 
-
-    public function printAll(Customer $customer)
-    {
-        // نجيبو المشترك الرئيسي + المنتفعين اللي عنده نفس رقم القيد
-        $all = Customer::where('registrationnumbers', $customer->registrationnumbers)->get();
-
-        // نجهز الواجهة كـ HTML
-        $html = view('customers.print-all', compact('all'))->render();
-
-        // إعداد mPDF مع الخط العربي (Tajawal)
-        $mpdf = new Mpdf([
-            'tempDir' => public_path('tmp'),
-            'fontDir' => [
-                public_path('/fonts'),
-            ],
-            'fontdata' => [
-                'tajawal' => [
-                    'R' => 'Tajawal-Normal.ttf',
-                    'B' => 'Tajawal-Bold.ttf',
-                    'useOTL' => 0xFF,
-                    'useKashida' => 75,
-                ]
-            ],
-            'default_font' => 'tajawal'
-        ]);
-
-        $mpdf->autoScriptToLang = true;
-        $mpdf->autoLangToFont   = true;
-
-        // كتابة محتوى البليد
-        $mpdf->WriteHTML($html);
-
-        // عرض مباشرة في المتصفح
-        return $mpdf->Output("customers_group_{$customer->id}.pdf", 'I');
+public function printAll(Customer $customer)
+{
+    // نحدد هل هو أساسي أو منتفع
+    if ($customer->main_customer_id === null) {
+        // أساسي → نجيب هو + منتفعينه
+        $all = Customer::where('main_customer_id', $customer->id)
+            ->orWhere('id', $customer->id)
+            ->get();
+    } else {
+        // منتفع → نجيب الأساسي + باقي المنتفعين
+        $main = $customer->mainCustomer;
+        $all = Customer::where('main_customer_id', $main->id)
+            ->orWhere('id', $main->id)
+            ->get();
     }
+
+    // نجهز الواجهة كـ HTML
+    $html = view('customers.print-all', compact('all'))->render();
+
+    // إعداد mPDF مع الخط العربي
+    $mpdf = new \Mpdf\Mpdf([
+        'tempDir' => public_path('tmp'),
+        'fontDir' => [
+            public_path('/fonts'),
+        ],
+        'fontdata' => [
+            'tajawal' => [
+                'R' => 'Tajawal-Normal.ttf',
+                'B' => 'Tajawal-Bold.ttf',
+                'useOTL' => 0xFF,
+                'useKashida' => 75,
+            ]
+        ],
+        'default_font' => 'tajawal'
+    ]);
+
+    $mpdf->autoScriptToLang = true;
+    $mpdf->autoLangToFont   = true;
+
+    // كتابة محتوى البليد
+    $mpdf->WriteHTML($html);
+
+    // عرض مباشرة في المتصفح
+    return $mpdf->Output("customers_group_{$customer->id}.pdf", 'I');
+}
 
 
 

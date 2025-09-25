@@ -36,14 +36,18 @@ use Illuminate\Support\Facades\Validator;
 //     ->name('cities.sendToApi');
 
 
-Route::resource('workplace_codes', \App\Http\Controllers\WorkplaceCodeController::class);
+
+    Auth::routes();
+
+   
+    Route::resource('workplace_codes', \App\Http\Controllers\WorkplaceCodeController::class);
 
     Route::get('create-child', [WorkplaceCodeController::class, 'createChild'])->name('workplace_codes.create_child');
     Route::post('workplace_codes', [WorkplaceCodeController::class, 'store'])->name('workplace_codes.store');
 
     Route::get('/workplace-codes/{parent}/children', [WorkplaceCodeController::class, 'children'])->name('workplace_codes.children');
 
-Route::post('/institucion/storefromsubscriberview', [App\Http\Controllers\InstitucionController::class, 'storefromsubscriberview'])
+    Route::post('/institucion/storefromsubscriberview', [App\Http\Controllers\InstitucionController::class, 'storefromsubscriberview'])
     ->name('institucion.storefromsubscriberview');
 
     Route::post('/search/customers', [CustomerController::class, 'searchUnified'])
@@ -54,15 +58,9 @@ Route::post('/institucion/storefromsubscriberview', [App\Http\Controllers\Instit
     Route::post('/verify-otp', [CustomerController::class, 'verifyOtp'])
     ->name('verify.otp');
 
-Route::get('/', function () {
-    return view('welcome');
-});
-
-
-
-Route::get('/customers/lookup', [CustomerController::class, 'showLookupForm'])->name('customers.lookup');
-Route::post('/customers/lookup-do', [CustomerController::class, 'doLookup'])->name('customers.get');
-Route::get('/customers/{customer}/print-card', [CustomerController::class, 'printCard'])->name('customers.print.card');
+    Route::get('/customers/lookup', [CustomerController::class, 'showLookupForm'])->name('customers.lookup');
+    Route::post('/customers/lookup-do', [CustomerController::class, 'doLookup'])->name('customers.get');
+    Route::get('/customers/{customer}/print-card', [CustomerController::class, 'printCard'])->name('customers.print.card');
 
 
     Route::get('/customers/search', [CustomerController::class, 'searchForm'])
@@ -156,7 +154,6 @@ Route::get('/insurance-agents/create', [InsuranceAgentsController::class, 'creat
     // Route::post('cards/storesv/{id}', [App\Http\Controllers\Dashbord\CardController::class, 'storephotosave'])->name('cards/storesv');
 
 
-Auth::routes();
 
 Route::group(['middleware' => ['auth', 'permission']], function () {
 
@@ -165,12 +162,17 @@ Route::resource('roles', RolesController::class);
 Route::resource('permissions', PermissionsController::class);
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+Route::get('/', [App\Http\Controllers\HomeController::class, 'index'])->name('home2');
+
 Route::get('users/users', [App\Http\Controllers\UserController::class, 'users'])->name('users.users');
 
 Route::resource('users', userController::class);
 Route::patch('subscriptions/toggle-status/{id}', [SubscriptionController::class, 'toggleStatus'])->name('subscriptions.toggleStatus');
 Route::resource('subscriptions', SubscriptionController::class);
-
+ 
+    // Route::get('/', function () {
+    //     return view('welcome');
+    // });
 
 //=================================================== InsuranceAgents ======================================================================================
 

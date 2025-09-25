@@ -333,6 +333,20 @@
                             </div>
                         </div>
 
+
+                        @if (session('subscriber_type') === 'single')
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-6 form-group">
+                                    <label>الجنس</label>
+                                    <select name="main[gender]" class="form-control" required>
+                                        <option value="">اختر الجنس</option>
+                                        <option value="ذكر" @selected(old('main.gender') == 'ذكر')>ذكر</option>
+                                        <option value="أنثى" @selected(old('main.gender') == 'أنثى')>أنثى</option>
+                                    </select>
+                                </div>
+                            </div>
+                        @endif
+
                         <!-- المصرف وفرع المصرف جنب بعض -->
 
                         @if (!in_array(session('beneficiariesSupCategories'), [1, 12]))

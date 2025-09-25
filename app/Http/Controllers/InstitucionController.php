@@ -210,7 +210,11 @@ public function show(Institucion $institucion)
         ->select('id','fullnamea','nationalID','phone')
         ->get();
 
-    return view('institucions.show', compact('institucion','otherInstitucions','customersCount','customers'));
+
+    $parents = \App\Models\WorkplaceCode::whereNull('parent_id')->get();
+
+
+    return view('institucions.show', compact('institucion','otherInstitucions','customersCount','customers','parents'));
 }
 
   
@@ -382,6 +386,8 @@ public function show(Institucion $institucion)
             Alert::success('تم التعديل', 'تم تعديل جهة العمل بنجاح');
             return redirect()->route('institucions.show', $institucion);
         }
+
+        
     public function destroy(Institucion $institucion)
     {
         // حذف الملفات المرتبطة (إن وجدت)
@@ -711,9 +717,244 @@ public function transferStore(Request $request, Institucion $institucion)
 //     return back()->with('success', 'تم تفعيل الجهة ونقل المشتركين (إن وجدوا)');
 // }
 
+// public function toggleStatus(Institucion $institucion, Request $request)
+// {
+//     // ✅ لو الجهة نشطة → إيقاف مباشر
+//     if ((int) $institucion->status === 1) {
+//         $institucion->status = 0;
+//         $institucion->save();
+//         return redirect()->route('institucions.show', $institucion)
+//             ->with('success', 'تم إيقاف الجهة');
+//     }
+
+//     // ---------- دالة مساعدة داخلية (بدون إضافة ميثود جديد للكلاس) ----------
+//     $buildConflicts = function () use ($institucion) {
+//         $baseRaw    = $institucion->name;
+//         $baseNorm   = $this->normalizeName($baseRaw);
+//         $baseTokens = $this->nameTokens($baseNorm);
+
+//         $conflicts = [];
+//         if (empty($baseTokens)) return $conflicts;
+
+//         $baseHead         = $baseTokens[0] ?? null;
+//         $isSingleWordBase = count($baseTokens) === 1;
+//         $noSpaceBase      = str_replace(' ', '', $baseNorm);
+
+//         // أرقام الأساس
+//         preg_match_all('/\d+/', $baseNorm, $baseNums);
+//         $baseNums = $baseNums[0] ?? [];
+
+//         $others = \App\Models\Institucion::where('id', '!=', $institucion->id)
+//             ->select('id','name')->get();
+
+//         foreach ($others as $row) {
+//             $candNorm   = $this->normalizeName($row->name);
+//             $candTokens = $this->nameTokens($candNorm);
+//             $candHead   = $candTokens[0] ?? null;
+
+//             $noSpaceCand = str_replace(' ', '', $candNorm);
+
+//             preg_match_all('/\d+/', $candNorm, $candNums);
+//             $candNums = $candNums[0] ?? [];
+//             $numbersMatch = !empty($baseNums) && !empty($candNums) &&
+//                             count(array_intersect($baseNums, $candNums)) > 0;
+
+//             $contained = (mb_strlen($noSpaceBase) >= 4 && mb_strlen($noSpaceCand) >= 4) &&
+//                          (mb_strpos($noSpaceBase, $noSpaceCand) !== false ||
+//                           mb_strpos($noSpaceCand, $noSpaceBase) !== false);
+
+//             // تشابه مجموعات
+//             $uniqBase = array_values(array_unique($baseTokens));
+//             $uniqCand = array_values(array_unique($candTokens));
+//             $jaccard  = $this->jaccardSimilarity($uniqBase, $uniqCand);
+//             $overlap  = $this->overlapCoefficient($uniqBase, $uniqCand);
+
+//             $prefixMatch = $baseHead && $candHead && $baseHead === $candHead;
+
+//             $similar = $isSingleWordBase
+//                 ? ($prefixMatch || $contained || $numbersMatch)
+//                 : ($contained || $overlap >= 80 || $jaccard >= 60 || $numbersMatch);
+
+//             if ($similar) {
+//                 $countCustomers = \App\Models\Customer::where('institucion_id', $row->id)->count();
+//                 $conflicts[] = [
+//                     'id'      => $row->id,
+//                     'name'    => $row->name,
+//                     'percent' => round(max($overlap, $jaccard), 2),
+//                     'count'   => $countCustomers,
+//                 ];
+//             }
+//         }
+
+//         // ترتيب أجمل (أعلى نسبة ثم أعلى عدد)
+//         usort($conflicts, function ($a, $b) {
+//             return ($b['percent'] <=> $a['percent']) ?: ($b['count'] <=> $a['count']);
+//         });
+
+//         return $conflicts;
+//     };
+//     // -----------------------------------------------------------------------
+
+//     // ✅ أول ضغط "تفعيل" بدون force → فحص تشابه وإظهار القائمة
+//     if (!$request->boolean('force')) {
+//         $conflicts = $buildConflicts();
+//         if (!empty($conflicts)) {
+//             return redirect()->route('institucions.show', $institucion)
+//                 ->with('similar_warning', 'هناك جهات مسجّلة بأسماء مشابهة')
+//                 ->with('similar_conflicts', $conflicts);
+//         }
+//     } else {
+//         // في حالة "تفعيل رغم التشابه" لو أرسلتِ code نحفظه لو مش موجود
+//         if (!$institucion->code && $request->filled('code')) {
+//             $institucion->code = trim($request->input('code'));
+//         }
+//     }
+
+//     // ✅ التفعيل
+//     $institucion->status = 1;
+//     $institucion->save();
+
+//     // ✅ "تفعيل رغم التشابه" → نحسب التشابه الآن وننقل المشتركين فعلياً
+//     if ($request->boolean('force')) {
+//         $conflicts = $buildConflicts();
+//         if (!empty($conflicts)) {
+//             $ids = array_column($conflicts, 'id');
+//             \App\Models\Customer::whereIn('institucion_id', $ids)
+//                 ->update(['institucion_id' => $institucion->id]);
+//         }
+//         return redirect()->route('institucions.show', $institucion)
+//             ->with('success', 'تم التفعيل ونُقل المشتركين من الجهات المشابهة');
+//     }
+
+//     return redirect()->route('institucions.show', $institucion)
+//         ->with('success', 'تم تفعيل الجهة');
+// }
+
+
+// public function toggleStatus(Institucion $institucion, Request $request)
+// {
+//     // ✅ لو الجهة نشطة → إيقاف مباشر
+//     if ((int) $institucion->status === 1) {
+//         $institucion->status = 0;
+//         $institucion->save();
+//         return redirect()->route('institucions.show', $institucion)
+//             ->with('success', 'تم إيقاف الجهة');
+//     }
+
+//     // ---------- دالة مساعدة لفحص التشابه ----------
+//     $buildConflicts = function () use ($institucion) {
+//         $baseRaw    = $institucion->name;
+//         $baseNorm   = $this->normalizeName($baseRaw);
+//         $baseTokens = $this->nameTokens($baseNorm);
+
+//         $conflicts = [];
+//         if (empty($baseTokens)) return $conflicts;
+
+//         $baseHead         = $baseTokens[0] ?? null;
+//         $isSingleWordBase = count($baseTokens) === 1;
+//         $noSpaceBase      = str_replace(' ', '', $baseNorm);
+
+//         // أرقام الأساس
+//         preg_match_all('/\d+/', $baseNorm, $baseNums);
+//         $baseNums = $baseNums[0] ?? [];
+
+//         $others = \App\Models\Institucion::where('id', '!=', $institucion->id)
+//             ->select('id','name')->get();
+
+//         foreach ($others as $row) {
+//             $candNorm   = $this->normalizeName($row->name);
+//             $candTokens = $this->nameTokens($candNorm);
+//             $candHead   = $candTokens[0] ?? null;
+
+//             $noSpaceCand = str_replace(' ', '', $candNorm);
+
+//             preg_match_all('/\d+/', $candNorm, $candNums);
+//             $candNums = $candNums[0] ?? [];
+//             $numbersMatch = !empty($baseNums) && !empty($candNums) &&
+//                             count(array_intersect($baseNums, $candNums)) > 0;
+
+//             $contained = (mb_strlen($noSpaceBase) >= 4 && mb_strlen($noSpaceCand) >= 4) &&
+//                          (mb_strpos($noSpaceBase, $noSpaceCand) !== false ||
+//                           mb_strpos($noSpaceCand, $noSpaceBase) !== false);
+
+//             $uniqBase = array_values(array_unique($baseTokens));
+//             $uniqCand = array_values(array_unique($candTokens));
+//             $jaccard  = $this->jaccardSimilarity($uniqBase, $uniqCand);
+//             $overlap  = $this->overlapCoefficient($uniqBase, $uniqCand);
+
+//             $prefixMatch = $baseHead && $candHead && $baseHead === $candHead;
+
+//             $similar = $isSingleWordBase
+//                 ? ($prefixMatch || $contained || $numbersMatch)
+//                 : ($contained || $overlap >= 80 || $jaccard >= 60 || $numbersMatch);
+
+//             if ($similar) {
+//                 $countCustomers = \App\Models\Customer::where('institucion_id', $row->id)->count();
+//                 $conflicts[] = [
+//                     'id'      => $row->id,
+//                     'name'    => $row->name,
+//                     'percent' => round(max($overlap, $jaccard), 2),
+//                     'count'   => $countCustomers,
+//                 ];
+//             }
+//         }
+
+//         // ترتيب: أعلى نسبة ثم أعلى عدد
+//         usort($conflicts, function ($a, $b) {
+//             return ($b['percent'] <=> $a['percent']) ?: ($b['count'] <=> $a['count']);
+//         });
+
+//         return $conflicts;
+//     };
+//     // -----------------------------------------------------------------------
+
+//     // ✅ إذا كان التفعيل عادي (مش force)
+//     if (!$request->boolean('force')) {
+//         $conflicts = $buildConflicts();
+//         if (!empty($conflicts)) {
+//             return redirect()->route('institucions.show', $institucion)
+//                 ->with('similar_warning', 'هناك جهات مسجّلة بأسماء مشابهة')
+//                 ->with('similar_conflicts', $conflicts);
+//         }
+//     }
+
+//     // ✅ إذا كان التفعيل "رغم التشابه"
+//     if ($request->boolean('force')) {
+//         // لو workplace_code_id مش معبأ → ننشئ كود جديد
+//         if (!$institucion->workplace_code_id && $request->filled('code')) {
+//             $newCode = \App\Models\WorkplaceCode::create([
+//                 'name'      => $institucion->name,
+//                 'code'      => $request->input('code'),
+//                 'parent_id' => $request->input('parent_id'),
+//             ]);
+//             $institucion->workplace_code_id = $newCode->id;
+//         }
+//     }
+
+//     // ✅ التفعيل
+//     $institucion->status = 1;
+//     $institucion->save();
+
+//     // ✅ لو كان force → ننقل المشتركين من الجهات المشابهة
+//     if ($request->boolean('force')) {
+//         $conflicts = $buildConflicts();
+//         if (!empty($conflicts)) {
+//             $ids = array_column($conflicts, 'id');
+//             \App\Models\Customer::whereIn('institucion_id', $ids)
+//                 ->update(['institucion_id' => $institucion->id]);
+//         }
+//         return redirect()->route('institucions.show', $institucion)
+//             ->with('success', 'تم التفعيل ونُقل المشتركين من الجهات المشابهة');
+//     }
+
+//     return redirect()->route('institucions.show', $institucion)
+//         ->with('success', 'تم تفعيل الجهة');
+// }
+
+
 public function toggleStatus(Institucion $institucion, Request $request)
 {
-    // ✅ لو الجهة نشطة → إيقاف مباشر
+    // لو الجهة نشطة → إيقاف مباشر
     if ((int) $institucion->status === 1) {
         $institucion->status = 0;
         $institucion->save();
@@ -721,7 +962,7 @@ public function toggleStatus(Institucion $institucion, Request $request)
             ->with('success', 'تم إيقاف الجهة');
     }
 
-    // ---------- دالة مساعدة داخلية (بدون إضافة ميثود جديد للكلاس) ----------
+    // دالة لفحص التشابه
     $buildConflicts = function () use ($institucion) {
         $baseRaw    = $institucion->name;
         $baseNorm   = $this->normalizeName($baseRaw);
@@ -730,48 +971,17 @@ public function toggleStatus(Institucion $institucion, Request $request)
         $conflicts = [];
         if (empty($baseTokens)) return $conflicts;
 
-        $baseHead         = $baseTokens[0] ?? null;
-        $isSingleWordBase = count($baseTokens) === 1;
-        $noSpaceBase      = str_replace(' ', '', $baseNorm);
-
-        // أرقام الأساس
-        preg_match_all('/\d+/', $baseNorm, $baseNums);
-        $baseNums = $baseNums[0] ?? [];
-
         $others = \App\Models\Institucion::where('id', '!=', $institucion->id)
             ->select('id','name')->get();
 
         foreach ($others as $row) {
             $candNorm   = $this->normalizeName($row->name);
             $candTokens = $this->nameTokens($candNorm);
-            $candHead   = $candTokens[0] ?? null;
 
-            $noSpaceCand = str_replace(' ', '', $candNorm);
+            $jaccard  = $this->jaccardSimilarity($baseTokens, $candTokens);
+            $overlap  = $this->overlapCoefficient($baseTokens, $candTokens);
 
-            // أرقام المرشّح
-            preg_match_all('/\d+/', $candNorm, $candNums);
-            $candNums = $candNums[0] ?? [];
-            $numbersMatch = !empty($baseNums) && !empty($candNums) &&
-                            count(array_intersect($baseNums, $candNums)) > 0;
-
-            // احتواء نصي
-            $contained = (mb_strlen($noSpaceBase) >= 4 && mb_strlen($noSpaceCand) >= 4) &&
-                         (mb_strpos($noSpaceBase, $noSpaceCand) !== false ||
-                          mb_strpos($noSpaceCand, $noSpaceBase) !== false);
-
-            // تشابه مجموعات
-            $uniqBase = array_values(array_unique($baseTokens));
-            $uniqCand = array_values(array_unique($candTokens));
-            $jaccard  = $this->jaccardSimilarity($uniqBase, $uniqCand);
-            $overlap  = $this->overlapCoefficient($uniqBase, $uniqCand);
-
-            $prefixMatch = $baseHead && $candHead && $baseHead === $candHead;
-
-            $similar = $isSingleWordBase
-                ? ($prefixMatch || $contained || $numbersMatch)
-                : ($contained || $overlap >= 80 || $jaccard >= 60 || $numbersMatch);
-
-            if ($similar) {
+            if ($jaccard >= 60 || $overlap >= 80) {
                 $countCustomers = \App\Models\Customer::where('institucion_id', $row->id)->count();
                 $conflicts[] = [
                     'id'      => $row->id,
@@ -782,49 +992,54 @@ public function toggleStatus(Institucion $institucion, Request $request)
             }
         }
 
-        // ترتيب أجمل (أعلى نسبة ثم أعلى عدد)
-        usort($conflicts, function ($a, $b) {
-            return ($b['percent'] <=> $a['percent']) ?: ($b['count'] <=> $a['count']);
-        });
-
         return $conflicts;
     };
-    // -----------------------------------------------------------------------
 
-    // ✅ أول ضغط "تفعيل" بدون force → فحص تشابه وإظهار القائمة
+    // تفعيل عادي (بدون force)
     if (!$request->boolean('force')) {
         $conflicts = $buildConflicts();
         if (!empty($conflicts)) {
             return redirect()->route('institucions.show', $institucion)
                 ->with('similar_warning', 'هناك جهات مسجّلة بأسماء مشابهة')
                 ->with('similar_conflicts', $conflicts);
-        }
-    } else {
-        // في حالة "تفعيل رغم التشابه" لو أرسلتِ code نحفظه لو مش موجود
-        if (!$institucion->code && $request->filled('code')) {
-            $institucion->code = trim($request->input('code'));
+        } else {
+            if ($request->filled('code') && $request->filled('child_id')) {
+                $institucion->code = $request->input('code');
+                $institucion->workplace_code_id = $request->input('child_id');
+            }
+
+            $institucion->status = 1;
+            $institucion->save();
+
+            return redirect()->route('institucions.show', $institucion)
+                ->with('success', 'تم تفعيل الجهة بنجاح (بدون تشابه)');
         }
     }
 
-    // ✅ التفعيل
-    $institucion->status = 1;
-    $institucion->save();
-
-    // ✅ "تفعيل رغم التشابه" → نحسب التشابه الآن وننقل المشتركين فعلياً
+    // تفعيل رغم التشابه (force)
     if ($request->boolean('force')) {
+        if ($request->filled('code') && $request->filled('child_id')) {
+            $institucion->code = $request->input('code');
+            $institucion->workplace_code_id = $request->input('child_id');
+        }
+
+        $institucion->status = 1;
+        $institucion->save();
+
         $conflicts = $buildConflicts();
         if (!empty($conflicts)) {
             $ids = array_column($conflicts, 'id');
             \App\Models\Customer::whereIn('institucion_id', $ids)
                 ->update(['institucion_id' => $institucion->id]);
         }
+
         return redirect()->route('institucions.show', $institucion)
             ->with('success', 'تم التفعيل ونُقل المشتركين من الجهات المشابهة');
     }
-
-    return redirect()->route('institucions.show', $institucion)
-        ->with('success', 'تم تفعيل الجهة');
 }
+
+
+
 
 
 

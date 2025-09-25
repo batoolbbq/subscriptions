@@ -84,6 +84,10 @@
                 <div class="val">{{ $customer->nationalID }}</div>
             </div>
             <div class="info-item">
+                <label>الرقم التأميني</label>
+                <div class="val">{{ $customer->regnumber ?? '—' }}</div>
+            </div>
+            <div class="info-item">
                 <label>البريد الإلكتروني</label>
                 <div class="val">{{ $customer->email ?? '—' }}</div>
             </div>
@@ -119,8 +123,10 @@
                 @foreach ($dependents as $dep)
                     <div class="info-item">
                         <label>الاسم</label>
-                        <div class="val">{{ $dep->fullnamea }} <br>
-                            <small style="color:var(--muted)">({{ $dep->nationalID }})</small>
+                        <div class="val">
+                            {{ $dep->fullnamea }} <br>
+                            <p style="color:var(--muted)">رقم وطني: {{ $dep->nationalID ?? '—' }}</p><br>
+                            <p style="color:var(--muted)">رقم تأميني: {{ $dep->regnumber ?? '—' }}</p>
                         </div>
                     </div>
                 @endforeach

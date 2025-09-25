@@ -71,12 +71,12 @@ class WorkplaceCodeController extends Controller
 }
 
 
-
 public function children($parentId)
 {
-    $children = WorkplaceCode::where('parent_id', $parentId)->get(['id', 'name', 'code']);
-    return response()->json($children);
+    return WorkplaceCode::where('parent_id', $parentId)
+        ->get(['id', 'name', 'code']);
 }
+
 
     /**
      * Display the specified resource.

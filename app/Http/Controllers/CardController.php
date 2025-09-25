@@ -65,7 +65,7 @@ class CardController extends Controller
 
         ], $messages);
         $reg = $request->regnumber;
-        $customers = Customer::with(['cities' , 'socialstatuses' , 'municipals' , 'nationalities' , 'bloodtypes'])->where('regnumber', $reg)->where('active', 1)->first();
+        $customers = Customer::with(['cities' , 'socialstatuses' , 'municipals' , 'nationalities' , 'bloodtypes'])->where('regnumber', $reg)->where('active', 0)->first();
         // $customer = retired::whereHas('customers', function ($query) use ($reg) {
         //     $query->where('regnumber', $reg);
         // })->with([

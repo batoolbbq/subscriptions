@@ -263,7 +263,7 @@
                     </div> --}}
 
                     {{-- زر البحث في المنتصف --}}
-                    <div class="col-12 mt-3 d-flex justify-content-start">
+                    <div class="col-12 mt-3 d-flex justify-content-center">
                         <button type="submit" class="btn btn-sm" id="submitBtn"
                             style="width:auto; padding:0 150px; margin-right:0;">
                             <span class="btn-text">بحث</span>

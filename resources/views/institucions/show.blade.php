@@ -28,14 +28,14 @@
                   box-shadow:0 8px 18px rgba(0,0,0,.06);">
                         تعديل
                     </a>
-                @else 
-                @role('insurance-manager')
-                    <a href="{{ route('institucions.edit', $institucion) }}"
-                        style="padding:8px 16px;border:1.5px solid #FFD8A8;border-radius:999px;background:#FFF5E6;
+                @else
+                    @role('insurance-manager')
+                        <a href="{{ route('institucions.edit', $institucion) }}"
+                            style="padding:8px 16px;border:1.5px solid #FFD8A8;border-radius:999px;background:#FFF5E6;
                   color:#92400E;font-weight:800;font-size:.9rem;text-decoration:none;
                   box-shadow:0 8px 18px rgba(0,0,0,.06);">
-                        تعديل
-                    </a>
+                            تعديل
+                        </a>
                     @endrole
                 @endif
                 <a href="{{ route('institucions.index') }}"
@@ -120,24 +120,26 @@
             @can('institucions.toggle-status')
                 <form action="{{ route('institucions.toggle-status', $institucion) }}" method="POST">
                     @csrf @method('PATCH')
+
                     @if ($institucion->status)
-                        <button type="submit"
+                        {{-- زر إيقاف: ما عليه JS --}}
+                        <button type="submit" id="btn-stop"
                             style="padding:8px 16px;border:1.5px solid var(--red-200);border-radius:999px;
-                                       background:var(--red-50);color:var(--red-700);font-weight:800;font-size:.9rem;
-                                       box-shadow:0 8px 18px rgba(180,35,24,.08);">
+                   background:var(--red-50);color:var(--red-700);font-weight:800;font-size:.9rem;
+                   box-shadow:0 8px 18px rgba(180,35,24,.08);">
                             إيقاف
                         </button>
                     @else
-                        <button type="submit" @if (session('similar_conflicts')) disabled @endif
+                        {{-- زر تفعيل: عليه JS ويكون disabled لو فيه تشابه --}}
+                        <button type="submit" id="btn-activate-normal" @if (session('similar_conflicts')) disabled @endif
                             style="padding:8px 16px;border:1.5px solid #86efac;border-radius:999px;
-                                       background:{{ session('similar_conflicts') ? '#f3f4f6' : 'var(--green-50)' }};
-                                       color:{{ session('similar_conflicts') ? '#9ca3af' : 'var(--green-700)' }};
-                                       font-weight:800;font-size:.9rem;box-shadow:0 8px 18px rgba(16,115,74,.08);">
+                   background:{{ session('similar_conflicts') ? '#f3f4f6' : 'var(--green-50)' }};
+                   color:{{ session('similar_conflicts') ? '#9ca3af' : 'var(--green-700)' }};
+                   font-weight:800;font-size:.9rem;box-shadow:0 8px 18px rgba(16,115,74,.08);">
                             تفعيل
                         </button>
                     @endif
                 </form>
-
                 {{-- زر النقل اليدوي --}}
 
                 {{-- فورم خفي للنقل
@@ -285,53 +287,162 @@
                         </div>
                     </div>
                 </div>
+
             @endrole
 
 
 
             {{-- فورم خفي لإرسال force=1 + code عند "تفعيل رغم التشابه" --}}
-            @can('institucions.toggle-status')
+            {{-- @can('institucions.toggle-status')
                 <form id="force-activate-form" action="{{ route('institucions.toggle-status', $institucion) }}" method="POST"
                     style="display:none;">
                     @csrf
                     @method('PATCH')
                     <input type="hidden" name="force" value="1">
                     <input type="hidden" name="code" id="force-code-input">
+                    <input type="hidden" name="parent_id" id="force-parent-input">
                 </form>
-            @endcan
+
+                <form id="normal-activate-form" action="{{ route('institucions.toggle-status', $institucion) }}"
+                    method="POST" style="display:none;">
+                    @csrf
+                    @method('PATCH')
+                    <input type="hidden" name="code" id="normal-code-input">
+                    <input type="hidden" name="parent_id" id="normal-parent-input">
+                </form>
+            @endcan --}}
         </div> {{-- .row --}}
     </div> {{-- .container --}}
 @endsection
-
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        // زر تفعيل رغم التشابه
+        // دالة عامة: تسأل على الترميز + تعرض preview
+        async function askForCode() {
+            const {
+                value: formValues
+            } = await Swal.fire({
+                title: 'حدد ترميز الجهة',
+                html: `
+            <select id="swal-parent" class="swal2-select">
+                <option value="">اختر التصنيف الرئيسي</option>
+                @foreach ($parents as $p)
+                    <option value="{{ $p->id }}" data-code="{{ $p->code }}">{{ $p->name }}</option>
+                @endforeach
+            </select>
+            <select id="swal-child" class="swal2-select" disabled>
+                <option value="">اختر التصنيف الفرعي</option>
+            </select>
+            <input id="swal-extra" class="swal2-input" placeholder="أدخل الترميز الإضافي">
+            <div id="preview-code" style="margin-top:8px;font-weight:800;color:#92400E;"></div>
+        `,
+                didOpen: () => {
+                    const parentSel = document.getElementById('swal-parent');
+                    const childSel = document.getElementById('swal-child');
+                    const extraInp = document.getElementById('swal-extra');
+                    const preview = document.getElementById('preview-code');
+
+                    function updatePreview() {
+                        const parentCode = parentSel.options[parentSel.selectedIndex]?.dataset.code || '';
+                        const childCode = childSel.options[childSel.selectedIndex]?.dataset.code || '';
+                        const extra = extraInp.value.trim();
+                        preview.textContent = parentCode + childCode + extra;
+                    }
+
+                    parentSel.addEventListener('change', function() {
+                        const parentId = this.value;
+                        childSel.innerHTML = '<option value="">اختر التصنيف الفرعي</option>';
+                        childSel.disabled = true;
+                        updatePreview();
+
+                        if (parentId) {
+                            fetch(`/workplace-codes/${parentId}/children`)
+                                .then(res => res.json())
+                                .then(data => {
+                                    data.forEach(item => {
+                                        const opt = document.createElement('option');
+                                        opt.value = item.id;
+                                        opt.dataset.code = item.code;
+                                        opt.textContent = `${item.name} (${item.code})`;
+                                        childSel.appendChild(opt);
+                                    });
+                                    childSel.disabled = false;
+                                });
+                        }
+                    });
+
+                    childSel.addEventListener('change', updatePreview);
+                    extraInp.addEventListener('input', updatePreview);
+                },
+                preConfirm: () => {
+                    const parentSel = document.getElementById('swal-parent');
+                    const childSel = document.getElementById('swal-child');
+                    const extra = document.getElementById('swal-extra').value.trim();
+
+                    const parentCode = parentSel.options[parentSel.selectedIndex]?.dataset.code || '';
+                    const childCode = childSel.options[childSel.selectedIndex]?.dataset.code || '';
+
+                    if (!parentCode || !childCode || !extra) {
+                        Swal.showValidationMessage('يجب اختيار جميع الحقول');
+                        return false;
+                    }
+
+                    return {
+                        code: parentCode + childCode + extra,
+                        parent_id: parentSel.value,
+                        child_id: childSel.value
+                    };
+                },
+                showCancelButton: true,
+                confirmButtonText: 'تأكيد'
+            });
+
+            return formValues;
+        }
+
+        // زر "تفعيل عادي" (بدون تشابه)
+        (function() {
+            const btn = document.getElementById('btn-activate-normal');
+            const normalForm = document.getElementById('normal-activate-form');
+            if (!btn || !normalForm) return;
+
+            btn.addEventListener('click', async function(e) {
+                // لو الزر disabled بسبب وجود تشابه → ما يفتحش SweetAlert
+                if (btn.disabled) return;
+
+                const hasWorkplaceCode = {{ $institucion->workplace_code_id ? 'true' : 'false' }};
+                const hasConflicts = {{ session('similar_conflicts') ? 'true' : 'false' }};
+
+                if (hasWorkplaceCode) return; // عنده كود من قبل
+                if (hasConflicts) return; // فيه تشابه → ما يفتحش هنا
+
+                // مافيش كود + مافيش تشابه → نسأل على الترميز
+                e.preventDefault();
+                const formValues = await askForCode();
+                if (!formValues) return; // Cancel
+
+                document.getElementById('normal-code-input').value = formValues.code;
+                document.getElementById('normal-parent-input').value = formValues.parent_id;
+                document.getElementById('normal-child-input').value = formValues.child_id;
+                normalForm.submit();
+            });
+        })();
+
+        // زر "تفعيل رغم التشابه"
         (function() {
             const btn = document.getElementById('btn-activate-anyway');
-            if (!btn) return;
+            const forceForm = document.getElementById('force-activate-form');
+            if (!btn || !forceForm) return;
 
             btn.addEventListener('click', async function() {
-                const hasCode = {{ $institucion->code ? 'true' : 'false' }};
-                let codeVal = '';
+                const hasWorkplaceCode = {{ $institucion->workplace_code_id ? 'true' : 'false' }};
 
-                if (!hasCode) {
-                    const {
-                        value: inputCode
-                    } = await Swal.fire({
-                        title: 'أدخل ترميز جهة العمل',
-                        input: 'text',
-                        inputLabel: 'الترميز مطلوب للتفعيل',
-                        inputPlaceholder: 'مثال: HR-TR-2025',
-                        inputValidator: (v) => {
-                            if (!v || v.trim() === '') return 'الترميز مطلوب';
-                        },
-                        showCancelButton: true,
-                        confirmButtonText: 'تفعيل',
-                        cancelButtonText: 'إلغاء'
-                    });
-                    if (!inputCode) return;
-                    codeVal = inputCode.trim();
+                if (!hasWorkplaceCode) {
+                    const formValues = await askForCode();
+                    if (!formValues) return;
+                    document.getElementById('force-code-input').value = formValues.code;
+                    document.getElementById('force-parent-input').value = formValues.parent_id;
+                    document.getElementById('force-child-input').value = formValues.child_id;
                 } else {
                     const ok = await Swal.fire({
                         title: 'تفعيل رغم التشابه؟',
@@ -343,74 +454,79 @@
                     if (!ok.isConfirmed) return;
                 }
 
-                const form = document.getElementById('force-activate-form');
-                const hiddenCode = document.getElementById('force-code-input');
-                if (codeVal) hiddenCode.value = codeVal;
-                form.submit();
+                forceForm.submit();
             });
         })();
-
-        // زر نقل المشتركين
-        document.getElementById('btn-transfer-customers').addEventListener('click', async function() {
-            const options = @json($otherInstitucions);
-            let inputOptions = {};
-            for (const [id, name] of Object.entries(options)) {
-                inputOptions[id] = name;
-            }
-
-            const {
-                value: fromId
-            } = await Swal.fire({
-                title: 'اختر الجهة المراد النقل منها',
-                input: 'select',
-                inputOptions: inputOptions,
-                inputPlaceholder: 'اختر جهة عمل...',
-                showCancelButton: true,
-                confirmButtonText: 'نقل',
-                cancelButtonText: 'إلغاء'
-            });
-
-            if (fromId) {
-                document.getElementById('transfer-from-id').value = fromId;
-                document.getElementById('transfer-form').submit();
-            }
-        });
-    </script>
-
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const part1 = document.getElementById('select-part1');
-            const part2 = document.getElementById('select-part2');
-            const extra = document.getElementById('extra-code');
-            const hiddenSub = document.getElementById('sub_code_id');
-
-            // عند اختيار الأساسي
-            part1.addEventListener('change', function() {
-                const parentId = this.value;
-                part2.innerHTML = '<option value="">اختر التصنيف الفرعي</option>';
-                part2.disabled = true;
-
-                if (parentId) {
-                    fetch(`/workplace_codes/by-parent/${parentId}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            data.forEach(item => {
-                                const opt = document.createElement('option');
-                                opt.value = item.id;
-                                opt.dataset.code = item.code;
-                                opt.textContent = `${item.name} (${item.code})`;
-                                part2.appendChild(opt);
-                            });
-                            part2.disabled = false;
-                        });
-                }
-            });
-
-            // عند اختيار الفرعي نخزن الـ id
-            part2.addEventListener('change', function() {
-                hiddenSub.value = this.value || '';
-            });
-        });
     </script>
 @endpush
+
+{{-- الفورمز المخفية --}}
+@can('institucions.toggle-status')
+    <form id="normal-activate-form" action="{{ route('institucions.toggle-status', $institucion) }}" method="POST"
+        style="display:none;">
+        @csrf
+        @method('PATCH')
+        <input type="hidden" name="code" id="normal-code-input">
+        <input type="hidden" name="parent_id" id="normal-parent-input">
+        <input type="hidden" name="child_id" id="normal-child-input">
+    </form>
+
+    <form id="force-activate-form" action="{{ route('institucions.toggle-status', $institucion) }}" method="POST"
+        style="display:none;">
+        @csrf
+        @method('PATCH')
+        <input type="hidden" name="force" value="1">
+        <input type="hidden" name="code" id="force-code-input">
+        <input type="hidden" name="parent_id" id="force-parent-input">
+        <input type="hidden" name="child_id" id="force-child-input">
+    </form>
+@endcan
+
+
+
+
+
+
+{{-- 🟢 فورم التفعيل العادي --}}
+<form id="normal-activate-form" action="{{ route('institucions.toggle-status', $institucion) }}" method="POST"
+    style="display:none;">
+    @csrf
+    @method('PATCH')
+    <input type="hidden" name="code" id="normal-code-input">
+    <input type="hidden" name="parent_id" id="normal-parent-input">
+    <input type="hidden" name="child_id" id="normal-child-input">
+
+</form>
+
+{{-- 🔴 فورم التفعيل رغم التشابه --}}
+<form id="force-activate-form" action="{{ route('institucions.toggle-status', $institucion) }}" method="POST"
+    style="display:none;">
+    @csrf
+    @method('PATCH')
+    <input type="hidden" name="force" value="1">
+    <input type="hidden" name="code" id="force-code-input">
+    <input type="hidden" name="parent_id" id="force-parent-input">
+</form>
+
+
+@can('institucions.toggle-status')
+    {{-- فورم التفعيل العادي (بدون تشابه) --}}
+    <form id="normal-activate-form" action="{{ route('institucions.toggle-status', $institucion) }}" method="POST"
+        style="display:none;">
+        @csrf
+        @method('PATCH')
+        <input type="hidden" name="code" id="normal-code-input">
+        <input type="hidden" name="child_id" id="normal-child-input"> {{-- هنا نحط ID الفرع --}}
+    </form>
+
+
+    {{-- فورم "تفعيل رغم التشابه" --}}
+    <form id="force-activate-form" action="{{ route('institucions.toggle-status', $institucion) }}" method="POST"
+        style="display:none;">
+        @csrf
+        @method('PATCH')
+        <input type="hidden" name="force" value="1">
+        <input type="hidden" name="code" id="force-code-input">
+        <input type="hidden" name="parent_id" id="force-parent-input">
+    </form>
+@endcan

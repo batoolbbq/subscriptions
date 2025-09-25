@@ -136,5 +136,17 @@ public function lastPhoto()
 }
 
 
+   public function mainCustomer()
+    {
+        return $this->belongsTo(Customer::class, 'main_customer_id');
+    }
+
+        public function dependents()
+    {
+        return $this->hasMany(Customer::class, 'main_customer_id');
+    }
+
+
+
     
 }

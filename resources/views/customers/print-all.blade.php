@@ -155,7 +155,13 @@
             </tr>
             <tr>
                 <td class="k-label">الجنس</td>
-                <td class="k-value">{{ $customer->gender ?? '—' }}</td>
+                <td class="k-value">
+                    @if ($customer->gender == 1)
+                        ذكر
+                    @elseif ($customer->gender == 2)
+                        أنثى
+                    @endif
+                </td>
                 <td class="k-label">رقم الهاتف</td>
                 <td class="k-value">{{ $customer->phone ?? '—' }}</td>
             </tr>

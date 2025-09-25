@@ -9,12 +9,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <!-- CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
     <style>
         :root {
             --brand: #F58220;
@@ -402,25 +396,19 @@
                         </div>
 
                         {{-- جهة العمل --}}
-                        {{-- جهة العمل --}}
                         <div id="institutionBlock" class="form-group" style="display:none;">
                             <label for="institution_id">جهة العمل</label>
                             <div class="input-icon">
                                 <i class="fa fa-building"></i>
-                                <select id="institution_id" name="institution_id" class="form-control select2">
+                                <select id="institution_id" name="institution_id">
                                     <option value="">اختر جهة العمل...</option>
                                     <option value="__new__">+ إضافة جهة عمل جديدة</option>
-                                    @foreach ($institucions as $inst)
-                                        <option value="{{ $inst->id }}">{{ $inst->name }}</option>
-                                    @endforeach
                                 </select>
                             </div>
                             @error('institution_id')
                                 <span class="error-text">{{ $message }}</span>
                             @enderror
                         </div>
-
-
 
                         {{-- زر الإرسال الوحيد (CRA + الشيت) --}}
                         <div class="actions" style="margin-top:14px;">
@@ -957,17 +945,6 @@
             });
         })();
     </script>
-
-    <script>
-        $(document).ready(function() {
-            $('#institution_id').select2({
-                placeholder: "اختر جهة العمل...",
-                allowClear: true,
-                width: '100%' // يخلي السلكت ياخذ عرض كامل
-            });
-        });
-    </script>
-
 
 
 </body>

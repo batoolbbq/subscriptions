@@ -152,10 +152,10 @@
                     class="{{ $pers && $pers->printed == 1 ? 'print__card' : 'show__print' }} btn">
                     حفظ
                 </button>
-                <button type="button" onclick="printCard('gift', {{ $customer->id }})"
+                {{-- <button type="button" onclick="printCard('gift', {{ $customer->id }})"
                     class="{{ $pers && $pers->printed == 0 ? 'show__print' : 'print__card' }} btn">
                     طباعة
-                </button>
+                </button> --}}
             </div>
 
             <input type="hidden" id="img" name="img" value="">
@@ -263,23 +263,22 @@
                 return;
             }
             $.ajax({
-                url: "{!! route('cards/store', ['id' => $customer->id]) !!}",
-                type: 'POST',
-                data: {
-                    _token: $('meta[name="csrf-token"]').attr('content'), // ✅
-                    selfImg: image,
-                },
-                success: function(data) {
-                    Swal.fire({
-                        icon: "success",
-                        timer: 20000,
-                        text: "تم الحفظ بنجاح",
-                        confirmButtonText: 'موافق',
-                        onClose: function() {
-                            // Redirect to a new route after success
-                            $('.print__card').toggleClass('show__print');
-                        }
-                    })
+                        url: "{!! route('cards/store', ['id' => $customer->id]) !!}",
+                        type: 'POST',
+                        data: {
+                            _token: $('meta[name="csrf-token"]').attr('content'), // ✅
+                            selfImg: image,
+                        },
+                        success: function(data) {
+                            Swal.fire({
+                                icon: "success",
+                                timer: 60000,
+                                text: "تم الحفظ بنجاح",
+                                confirmButtonText: 'موافق',
+                            }).then(() => {
+                                window.location.href = "{{ route('home') }}"; // ✅ التوجيه للهوم
+                            });
+                        
 
                 },
                 error: function(error) {
@@ -290,7 +289,7 @@
                         confirmButtonText: 'موافق'
                     })
                 }
-            });
+        });
         }
 
         function allowCard(el, id) {

@@ -168,14 +168,16 @@
                                 الترخيص</label>
                             <input type="file" name="license_number" class="form-control"
                                 style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
-                                accept=".pdf,.jpg,.jpeg,.png">
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                required>
                         </div>
                         <div class="col-md-6">
                             <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">ملف
                                 السجل التجاري</label>
                             <input type="file" name="commercial_record" class="form-control"
                                 style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
-                                accept=".pdf,.jpg,.jpeg,.png">
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                required>
                         </div>
                     </div>
                 </div>
@@ -309,5 +311,10 @@
                 reader.readAsArrayBuffer(fileInput.files[0]);
             });
         })();
+
+
+
+
+
     </script>
 @endpush

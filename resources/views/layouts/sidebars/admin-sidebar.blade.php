@@ -124,18 +124,37 @@
                     </li> --}}
 
 
-                      <li>
+                    <li>
                         <a href="{{ route('customers.lookup') }}"><i class="fas fa-exchange-alt"></i><span
                                 class="right-nav-text">{{ __('بدل فاقد ') }}</span></a>
                     </li>
 
 
 
-                      <li>
-                        <a href="{{ route('cards/index') }}"><i class="fas fa-exchange-alt"></i><span
-                                class="right-nav-text">{{ __('تصوير مشترك / منتفع  ') }}</span></a>
+                    <li>
+                        <a href="{{ route('cards/index') }}">
+                            <i class="fas fa-id-card"></i>
+                            <span class="right-nav-text">{{ __('تصوير مشترك / منتفع') }}</span>
+                        </a>
                     </li>
 
+                    @can('workplace_codes.create')
+                        <li>
+                            <a href="{{ route('workplace_codes.create') }}">
+                                <i class="fas fa-layer-group"></i>
+                                <span class="right-nav-text">{{ __('ترميزات رئيسية') }}</span>
+                            </a>
+                        </li>
+                    @endcan
+
+                    @can('workplace_codes.create_child')
+                        <li>
+                            <a href="{{ route('workplace_codes.create_child') }}">
+                                <i class="fas fa-sitemap"></i>
+                                <span class="right-nav-text">{{ __('ترميزات فرعية') }}</span>
+                            </a>
+                        </li>
+                    @endcan
 
 
 
