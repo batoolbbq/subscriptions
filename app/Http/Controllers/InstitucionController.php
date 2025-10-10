@@ -14,8 +14,7 @@ use App\Models\AddedServiceService;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\InstitucionSheetImport;
 use RealRashid\SweetAlert\Facades\Alert;
-
-use Normalizer;   // <<< أضف هذا السطر
+use Normalizer;  
 
 
 class InstitucionController extends Controller
@@ -26,7 +25,6 @@ class InstitucionController extends Controller
 
         $query = Institucion::query()->with('insuranceAgent');
 
-        // فلترة الحالة إذا حابب
         if ($request->filled('status')) {
             if ($request->status === 'active') {
                 $query->where('status', 1);
@@ -36,16 +34,14 @@ class InstitucionController extends Controller
         }
 
         if ($user->hasRole('insurance-manager')) {
-            // يشوف كل شيء
         } elseif ($user->hasRole('Wakeel')) {
                     $agentId = $user->insuranceAgents->pluck('id')->toArray();
             $query->where('insurance_agent_id', $agentId);
         } else {
-            // ممكن ترجعه فاضي أو تحط منطق آخر
             $query->whereRaw('1=0');
         }
 
-        $items = $query->get(); // بدون باجينيت
+        $items = $query->get(); 
 
         return view('institucions.index', compact('items'));
     }
@@ -56,144 +52,499 @@ class InstitucionController extends Controller
     {
         $user = Auth::user();
 
+         $parents = \App\Models\WorkplaceCode::whereNull('parent_id')->get();
+
+
         $workCategories  = WorkCategory::orderBy('name')->get();
         $subscriptions   = Subscription::orderBy('id', 'desc')->get();
-        $agents          = collect(); // للأدمن فقط
+        $agents          = collect();   
         $requiresDocsIds = [20, 21];
 
-        $showAgentSelect    = false; // هل نعرض السيلكت؟
-        $preselectedAgentId = null;  // القيمة التي سنرسلها للواجهة
+        $showAgentSelect    = false; 
+        $preselectedAgentId = null;  
 
         if ($user->hasRole('admin')) {
             $showAgentSelect    = true;
             $agents             = InsuranceAgents::select('id','name')->orderBy('name')->get();
-            $preselectedAgentId = old('insurance_agent_id'); // مفرد
+            $preselectedAgentId = old('insurance_agent_id');  
         } elseif ($user->hasRole('Wakeel')) {
             $preselectedAgentId = $user->insuranceAgents()->pluck('insurance_agents.id')->first();
         } elseif ($user->hasRole('insurance-manager')) {
-            $preselectedAgentId = 94; // المطلوب
+            $preselectedAgentId = 94;  
         } else {
             abort(403, 'ليس لديك صلاحية لإضافة جهة عمل.');
         }
 
         return view('institucions.create', compact(
             'workCategories','subscriptions','agents','requiresDocsIds',
-            'showAgentSelect','preselectedAgentId'
+            'showAgentSelect','preselectedAgentId','parents'
         ));
     }
 
    
-    public function store(Request $request)
+    // public function store(Request $request)
+    // {
+    //     $user = auth()->user();
+
+    //     // ✅ تحديد الوكيل حسب الدور
+    //     $forcedAgentId = null;
+
+    //     if ($user->hasRole('insurance-manager')) {
+    //         $forcedAgentId = 94;
+    //     } elseif ($user->hasRole('Wakeel')) {
+    //         $forcedAgentId = $user->insuranceAgents()->pluck('insurance_agents.id')->first();
+    //         if (!$forcedAgentId) {
+    //             return back()->withErrors(['insurance_agent_id' => 'لا يوجد وكيل تأميني مرتبط بحسابك.'])->withInput();
+    //         }
+    //     }
+
+    //     if (!is_null($forcedAgentId)) {
+    //         $request->merge(['insurance_agent_id' => $forcedAgentId]);
+    //     }
+
+    //     $wcId = (int) $request->input('work_categories_id');
+    //     $autoMap = [
+    //         19 => 10,
+    //         21 => 11,
+    //         20 => 10,
+    //     ];
+    //     if (isset($autoMap[$wcId])) {
+    //         $request->merge(['subscriptions_id' => $autoMap[$wcId]]);
+    //     }
+
+    //     $agentRule = $user->hasRole('admin')
+    //         ? 'required|exists:insurance_agents,id'
+    //         : 'exists:insurance_agents,id';
+
+    //     $validated = $request->validate([
+    //         'name'               => ['required', 'string', 'max:255'],
+    //         'commercial_number'  => [
+    //             $request->input('work_categories_id') == 19 ? 'nullable' : 'required',
+    //             'string',
+    //             'max:255',
+    //             'unique:institucions,commercial_number',
+    //         ],
+    //         'work_categories_id' => ['required', 'exists:work_categories,id'],
+    //         'subscriptions_id'   => ['required', 'exists:subscription33,id'],
+    //         'insurance_agent_id' => $agentRule,
+    //         'status'             => ['nullable', 'in:0,1'],
+
+    //         'license_number'     => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+    //         'commercial_record'  => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+    //         'code'               => ['nullable','string','max:50'], 
+    //         'excel_sheet'        => ['nullable', 'file', 'mimes:xlsx,xls,csv', 'max:51200'],
+    //     ], [
+    //         'insurance_agent_id.required' => 'يجب اختيار وكيل تأميني.',
+    //     ]);
+
+    //     $data = $validated;
+
+    //     // ✅ الحالة حسب الدور
+    //     $data['status'] = $user->hasRole('Wakeel') ? 0 : (array_key_exists('status', $data) ? (int)(bool)$data['status'] : 1);
+
+    //     // ✅ رفع الملفات
+    //     $uploadPath = public_path('institucions_files');
+    //     if (!file_exists($uploadPath)) mkdir($uploadPath, 0775, true);
+
+    //     if ($request->hasFile('license_number')) {
+    //         $f = $request->file('license_number');
+    //         $name = time().'_license_'.$f->getClientOriginalName();
+    //         $f->move($uploadPath, $name);
+    //         $data['license_number'] = 'institucions_files/'.$name;
+    //     }
+
+    //     if ($request->hasFile('commercial_record')) {
+    //         $f = $request->file('commercial_record');
+    //         $name = time().'_record_'.$f->getClientOriginalName();
+    //         $f->move($uploadPath, $name);
+    //         $data['commercial_record'] = 'institucions_files/'.$name;
+    //     }
+
+    //     // ✅ إنشاء الجهة
+    //     $model = \App\Models\Institucion::create($data);
+
+    //     // ✅ تسجيل الخدمة (service_id = 1 ثابت)
+    //     \App\Models\ServiceLog::create([
+    //         'user_id'        => $user->id,
+    //         'service_id'     => 1,
+    //         'institucion_id' => $model->id,
+    //         'customer_id'    => null,
+    //     ]);
+
+    //     // ✅ استيراد الإكسل لو موجود
+    //     if ($request->hasFile('excel_sheet')) {
+    //         try {
+    //             // 1️⃣ استيراد مباشرة
+    //             Excel::import(new InstitucionSheetImport($model->id), $request->file('excel_sheet'));
+
+    //             // 2️⃣ حفظ نسخة في الفولدر
+    //             $f = $request->file('excel_sheet');
+    //             $name = time().'_excel_'.$f->getClientOriginalName();
+    //             $f->move($uploadPath, $name);
+
+    //             $model->update([
+    //                 'excel_path' => 'institucions_files/'.$name
+    //             ]);
+
+    //         } catch (\Throwable $e) {
+    //             return redirect()->route('institucions.show', $model)
+    //                 ->with('warning', 'تم إنشاء جهة العمل، لكن حدث خطأ أثناء استيراد ملف الإكسل: '.$e->getMessage());
+    //         }
+    //     }
+
+    //     // ✅ رجوع بالنجاح
+    //     return redirect()->route('institucions.show', $model)
+    //         ->with('success', 'تمت إضافة جهة العمل بنجاح');
+    // }
+
+
+
+
+// public function store(Request $request)
+// {
+//     $user = auth()->user();
+
+//     // ✅ تحديد الوكيل حسب الدور
+//     $forcedAgentId = null;
+//     if ($user->hasRole('insurance-manager')) {
+//         $forcedAgentId = 94;
+//     } elseif ($user->hasRole('Wakeel')) {
+//         $forcedAgentId = $user->insuranceAgents()->pluck('insurance_agents.id')->first();
+//         if (!$forcedAgentId) {
+//             return back()->withErrors(['insurance_agent_id' => 'لا يوجد وكيل تأميني مرتبط بحسابك.'])->withInput();
+//         }
+//     }
+
+//     if (!is_null($forcedAgentId)) {
+//         $request->merge(['insurance_agent_id' => $forcedAgentId]);
+//     }
+
+//     // ✅ تعيين الاشتراك حسب work_categories_id
+//     $wcId = (int) $request->input('work_categories_id');
+//     $autoMap = [
+//         19 => 10,
+//         21 => 11,
+//         20 => 10,
+//     ];
+//     if (isset($autoMap[$wcId])) {
+//         $request->merge(['subscriptions_id' => $autoMap[$wcId]]);
+//     }
+
+//     $agentRule = $user->hasRole('admin')
+//         ? 'required|exists:insurance_agents,id'
+//         : 'exists:insurance_agents,id';
+
+//     // ✅ الفالديشن
+//     $validated = $request->validate([
+//         'name'               => ['required', 'string', 'max:255'],
+//         'commercial_number'  => ['nullable', 'string', 'max:255', 'unique:institucions,commercial_number'],
+//         'work_categories_id' => ['required', 'exists:work_categories,id'],
+//         'subscriptions_id'   => ['required', 'exists:subscription33,id'],
+//         'insurance_agent_id' => $agentRule,
+//         'status'             => ['nullable', 'in:0,1'],
+
+//         'license_number'     => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+//         'commercial_record'  => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+
+//         // ✅ الترميز الجديد
+//         'code'       => ['nullable','string','max:50'],
+//         'parent_id'  => ['nullable','exists:workplace_codes,id'],
+//         'child_id'   => ['nullable','exists:workplace_codes,id'],
+
+//         'excel_sheet'        => ['nullable', 'file', 'mimes:xlsx,xls,csv', 'max:51200'],
+//     ], [
+//         'insurance_agent_id.required' => 'يجب اختيار وكيل تأميني.',
+//     ]);
+
+//     $data = $validated;
+
+//     // ✅ الحالة حسب الدور
+//     $data['status'] = $user->hasRole('Wakeel')
+//         ? 0
+//         : (array_key_exists('status', $data) ? (int)(bool)$data['status'] : 1);
+
+//     // ✅ رفع الملفات
+//     $uploadPath = public_path('institucions_files');
+//     if (!file_exists($uploadPath)) mkdir($uploadPath, 0775, true);
+
+//     if ($request->hasFile('license_number')) {
+//         $f = $request->file('license_number');
+//         $name = time().'_license_'.$f->getClientOriginalName();
+//         $f->move($uploadPath, $name);
+//         $data['license_number'] = 'institucions_files/'.$name;
+//     }
+
+//     if ($request->hasFile('commercial_record')) {
+//         $f = $request->file('commercial_record');
+//         $name = time().'_record_'.$f->getClientOriginalName();
+//         $f->move($uploadPath, $name);
+//         $data['commercial_record'] = 'institucions_files/'.$name;
+//     }
+
+//     // ✅ الترميز - نخزنه كما هو من الواجهة بدون تكرار
+//     if ($request->filled('code')) {
+//         $data['code'] = trim($request->input('code')); 
+//     }
+
+//     // نخزن الـ parent_id و child_id كما هي للعلاقات
+//     if ($request->filled('parent_id')) {
+//         $data['parent_id'] = $request->input('parent_id');
+//     }
+
+//     if ($request->filled('child_id')) {
+//         $data['child_id'] = $request->input('child_id');
+//     }
+
+//     // ✅ إنشاء الجهة
+//     $model = \App\Models\Institucion::create($data);
+
+//     // ✅ تسجيل الخدمة (service_id = 1 ثابت)
+//     \App\Models\ServiceLog::create([
+//         'user_id'        => $user->id,
+//         'service_id'     => 1,
+//         'institucion_id' => $model->id,
+//         'customer_id'    => null,
+//     ]);
+
+//     // ✅ استيراد الإكسل لو موجود
+//     if ($request->hasFile('excel_sheet')) {
+//         try {
+//             Excel::import(new InstitucionSheetImport($model->id), $request->file('excel_sheet'));
+
+//             // حفظ نسخة في الفولدر
+//             $f = $request->file('excel_sheet');
+//             $name = time().'_excel_'.$f->getClientOriginalName();
+//             $f->move($uploadPath, $name);
+
+//             $model->update([
+//                 'excel_path' => 'institucions_files/'.$name
+//             ]);
+
+//         } catch (\Throwable $e) {
+//             return redirect()->route('institucions.show', $model)
+//                 ->with('warning', 'تم إنشاء جهة العمل، لكن حدث خطأ أثناء استيراد ملف الإكسل: '.$e->getMessage());
+//         }
+//     }
+
+//     // ✅ رجوع بالنجاح
+//     return redirect()->route('institucions.show', $model)
+//         ->with('success', 'تمت إضافة جهة العمل بنجاح');
+// }
+
+
+
+public function store(Request $request)
 {
     $user = auth()->user();
 
-    // ✅ تحديد الوكيل حسب الدور
-    $forcedAgentId = null;
+    $forcedAgentId = match (true) {
+        $user->hasRole('insurance-manager') => 94,
+        $user->hasRole('Wakeel') => $user->insuranceAgents()->pluck('insurance_agents.id')->first(),
+        default => null,
+    };
 
-    if ($user->hasRole('insurance-manager')) {
-        $forcedAgentId = 94;
-    } elseif ($user->hasRole('Wakeel')) {
-        $forcedAgentId = $user->insuranceAgents()->pluck('insurance_agents.id')->first();
-        if (!$forcedAgentId) {
-            return back()->withErrors(['insurance_agent_id' => 'لا يوجد وكيل تأميني مرتبط بحسابك.'])->withInput();
-        }
+    if ($user->hasRole('Wakeel') && !$forcedAgentId) {
+        return back()
+            ->withErrors(['insurance_agent_id' => 'لا يوجد وكيل تأميني مرتبط بحسابك.'])
+            ->withInput();
     }
 
-    if (!is_null($forcedAgentId)) {
+    if ($forcedAgentId) {
         $request->merge(['insurance_agent_id' => $forcedAgentId]);
     }
 
-    // ✅ تعيين الاشتراك حسب work_categories_id
-    $wcId = (int) $request->input('work_categories_id');
-    $autoMap = [
-        19 => 10,
-        21 => 11,
-        20 => 10,
-    ];
-    if (isset($autoMap[$wcId])) {
-        $request->merge(['subscriptions_id' => $autoMap[$wcId]]);
+    $autoMap = [19 => 10, 21 => 11, 20 => 10];
+    if (isset($autoMap[$request->work_categories_id])) {
+        $request->merge(['subscriptions_id' => $autoMap[$request->work_categories_id]]);
     }
 
     $agentRule = $user->hasRole('admin')
         ? 'required|exists:insurance_agents,id'
         : 'exists:insurance_agents,id';
 
-    // ✅ الفالديشن
     $validated = $request->validate([
-        'name'               => ['required', 'string', 'max:255'],
-        'commercial_number'  => ['nullable', 'string', 'max:255', 'unique:institucions,commercial_number'],
-        'work_categories_id' => ['required', 'exists:work_categories,id'],
-        'subscriptions_id'   => ['required', 'exists:subscription33,id'],
+        'name'               => 'required|string|max:255',
+        'commercial_number'  => 'nullable|string|max:255|unique:institucions,commercial_number',
+        'work_categories_id' => 'required|exists:work_categories,id',
+        'subscriptions_id'   => 'required|exists:subscription33,id',
         'insurance_agent_id' => $agentRule,
-        'status'             => ['nullable', 'in:0,1'],
-
-        'license_number'     => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
-        'commercial_record'  => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
-        'code'               => ['nullable','string','max:50'], 
-        'excel_sheet'        => ['nullable', 'file', 'mimes:xlsx,xls,csv', 'max:51200'],
+        'status'             => 'nullable|in:0,1',
+        'license_number'     => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        'commercial_record'  => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        'code'               => 'nullable|string|max:50',
+        'parent_id'          => 'nullable|exists:workplace_codes,id',
+        'child_id'           => 'nullable|exists:workplace_codes,id',
+        'excel_sheet'        => 'nullable|file|mimes:xlsx,xls,csv|max:51200',
     ], [
         'insurance_agent_id.required' => 'يجب اختيار وكيل تأميني.',
     ]);
 
-    $data = $validated;
+    $validated['status'] = $user->hasRole('Wakeel')
+        ? 0
+        : ($validated['status'] ?? 1);
 
-    // ✅ الحالة حسب الدور
-    $data['status'] = $user->hasRole('Wakeel') ? 0 : (array_key_exists('status', $data) ? (int)(bool)$data['status'] : 1);
-
-    // ✅ رفع الملفات
     $uploadPath = public_path('institucions_files');
-    if (!file_exists($uploadPath)) mkdir($uploadPath, 0775, true);
-
-    if ($request->hasFile('license_number')) {
-        $f = $request->file('license_number');
-        $name = time().'_license_'.$f->getClientOriginalName();
-        $f->move($uploadPath, $name);
-        $data['license_number'] = 'institucions_files/'.$name;
+    if (!is_dir($uploadPath)) {
+        mkdir($uploadPath, 0775, true);
     }
 
-    if ($request->hasFile('commercial_record')) {
-        $f = $request->file('commercial_record');
-        $name = time().'_record_'.$f->getClientOriginalName();
-        $f->move($uploadPath, $name);
-        $data['commercial_record'] = 'institucions_files/'.$name;
-    }
-
-    // ✅ إنشاء الجهة
-    $model = \App\Models\Institucion::create($data);
-
-    // ✅ تسجيل الخدمة (service_id = 1 ثابت)
-    \App\Models\ServiceLog::create([
-        'user_id'        => $user->id,
-        'service_id'     => 1,
-        'institucion_id' => $model->id,
-        'customer_id'    => null,
-    ]);
-
-    // ✅ استيراد الإكسل لو موجود
-    if ($request->hasFile('excel_sheet')) {
-        try {
-            // 1️⃣ استيراد مباشرة
-            Excel::import(new InstitucionSheetImport($model->id), $request->file('excel_sheet'));
-
-            // 2️⃣ حفظ نسخة في الفولدر
-            $f = $request->file('excel_sheet');
-            $name = time().'_excel_'.$f->getClientOriginalName();
-            $f->move($uploadPath, $name);
-
-            $model->update([
-                'excel_path' => 'institucions_files/'.$name
-            ]);
-
-        } catch (\Throwable $e) {
-            return redirect()->route('institucions.show', $model)
-                ->with('warning', 'تم إنشاء جهة العمل، لكن حدث خطأ أثناء استيراد ملف الإكسل: '.$e->getMessage());
+    foreach (['license_number' => 'license', 'commercial_record' => 'record'] as $field => $prefix) {
+        if ($request->hasFile($field)) {
+            $file = $request->file($field);
+            $filename = time() . "_{$prefix}_" . $file->getClientOriginalName();
+            $file->move($uploadPath, $filename);
+            $validated[$field] = "institucions_files/{$filename}";
         }
     }
 
-    // ✅ رجوع بالنجاح
-    return redirect()->route('institucions.show', $model)
-        ->with('success', 'تمت إضافة جهة العمل بنجاح');
+    \DB::beginTransaction();
+    try {
+        $validated['code']      = trim($request->input('code', ''));
+        $validated['parent_id'] = $request->input('parent_id');
+        $validated['child_id']  = $request->input('child_id');
+
+        $model = \App\Models\Institucion::create($validated);
+
+        \App\Models\ServiceLog::create([
+            'user_id'        => $user->id,
+            'service_id'     => 1,
+            'institucion_id' => $model->id,
+            'customer_id'    => null,
+        ]);
+
+        if ($request->hasFile('excel_sheet')) {
+            try {
+                Excel::import(new InstitucionSheetImport($model->id), $request->file('excel_sheet'));
+
+                $f = $request->file('excel_sheet');
+                $name = time().'_excel_'.$f->getClientOriginalName();
+                $f->move($uploadPath, $name);
+
+                $model->update([
+                    'excel_path' => 'institucions_files/'.$name
+                ]);
+            } catch (\Throwable $e) {
+                \DB::rollBack();
+                return redirect()->route('institucions.show', $model)
+                    ->with('warning', 'تم إنشاء جهة العمل، لكن حدث خطأ أثناء استيراد ملف الإكسل: '.$e->getMessage());
+            }
+        }
+
+        \DB::commit();
+
+        return redirect()
+            ->route('institucions.show', $model)
+            ->with('success_swal', 'تمت إضافة جهة العمل بنجاح ✅');
+
+    } catch (\Throwable $e) {
+        \DB::rollBack();
+        return back()
+            ->withErrors(['error' => 'حدث خطأ أثناء الحفظ: '.$e->getMessage()])
+            ->withInput();
+    }
 }
+
+
+
+
+
+public function sendOtps(Request $request)
+{
+    $phone = $request->input('phone') ?? $request->query('phone');
+
+    if (!$phone) {
+        return response()->json([
+            'success' => false,
+            'message' => 'الرقم مطلوب'
+        ], 400);
+    }
+
+    $phone = preg_replace('/\D/', '', $phone);
+    if (!str_starts_with($phone, '218')) {
+        $phone = '218' . ltrim($phone, '0');
+    }
+
+    $prefix = substr($phone, 3, 2);
+    $otp = rand(100000, 999999);
+
+    $url = 'http://10.110.110.35:8089/cgi-bin/sendsms';
+
+    if (in_array($prefix, ['91', '93'])) {
+        
+        $username = 'ldjsender';
+        $password = 'ldj@321';
+        $from     = '10157';
+    } elseif (in_array($prefix, ['92', '94'])) {
+        
+        $username = 'mdjsender';
+        $password = 'mdj@321';
+        $from     = 'phif';
+    } else {
+        return response()->json([
+            'success' => false,
+            'message' => 'الرقم غير تابع للمدار أو ليبيانا'
+        ], 400);
+    }
+
+    $params = [
+        'username' => $username,
+        'password' => $password,
+        'from'     => $from,
+        'to'       => $phone,
+        'text'     => "رمز التحقق الخاص بك هو: {$otp}"
+    ];
+
+    try {
+        $response = Http::withOptions(['verify' => false])->get($url, $params);
+        $body = trim($response->body());
+
+        \Log::info('📩 SMS Response', [
+            'phone' => $phone,
+            'prefix' => $prefix,
+            'network' => in_array($prefix, ['91', '93']) ? 'المدار' : 'ليبيانا',
+            'response' => $body,
+            'status' => $response->status(),
+        ]);
+
+        if (str_contains($body, '0:') || str_contains(strtolower($body), 'accepted')) {
+            \App\Models\Verification::updateOrCreate(
+                ['phone' => $phone],
+                ['otp' => $otp, 'otp_time' => now()]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم إرسال رمز التحقق بنجاح',
+                'otp' => $otp,
+                'phone' => $phone,
+                'network' => in_array($prefix, ['91', '93']) ? 'المدار' : 'ليبيانا',
+                'response' => $body
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'فشل الإرسال عبر السيرفر الداخلي',
+            'response' => $body
+        ], 500);
+
+    } catch (\Exception $e) {
+        \Log::error('❌ خطأ أثناء إرسال OTP', [
+            'phone' => $phone,
+            'error' => $e->getMessage()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'حدث خطأ أثناء الإرسال',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+
+
+
 
 
 
@@ -202,10 +553,8 @@ public function show(Institucion $institucion)
     $otherInstitucions = Institucion::where('id', '!=', $institucion->id)
         ->pluck('name', 'id');
 
-    // عدد المشتركين
     $customersCount = $institucion->customers()->count();
 
-    // قائمة المشتركين (مثلاً الاسم والرقم الوطني)
     $customers = $institucion->customers()
         ->select('id','fullnamea','nationalID','phone')
         ->get();
@@ -330,7 +679,6 @@ public function show(Institucion $institucion)
 
             $data = $validated;
 
-            // استبدال الملفات عند الرفع
             if ($request->hasFile('license_number')) {
                 if ($institucion->license_number && Storage::exists($institucion->license_number)) {
                     Storage::delete($institucion->license_number);
@@ -354,7 +702,6 @@ public function show(Institucion $institucion)
                     $importer = new \App\Imports\InstitucionSheetImport($institucion->id);
                     Excel::import($importer, $request->file('excel_sheet'));
 
-                    // حفظ نسخة من الملف
                     $f = $request->file('excel_sheet');
                     $name = time() . '_excel_' . $f->getClientOriginalName();
                     $f->move(public_path('institucions_files'), $name);
@@ -382,7 +729,6 @@ public function show(Institucion $institucion)
                 }
             }
 
-            // لا يوجد ملف إكسل — نجاح عادي
             Alert::success('تم التعديل', 'تم تعديل جهة العمل بنجاح');
             return redirect()->route('institucions.show', $institucion);
         }
@@ -390,7 +736,6 @@ public function show(Institucion $institucion)
         
     public function destroy(Institucion $institucion)
     {
-        // حذف الملفات المرتبطة (إن وجدت)
         foreach (['license_number', 'commercial_record'] as $f) {
             $p = $institucion->{$f};
             if ($p && Storage::exists($p)) {
@@ -412,7 +757,6 @@ public function show(Institucion $institucion)
     {
         $user = auth()->user();
 
-        // ✅ تحديد الوكيل حسب الدور
         $forcedAgentId = null;
 
         if ($user->hasRole('insurance-manager')) {
@@ -428,7 +772,6 @@ public function show(Institucion $institucion)
             $request->merge(['insurance_agent_id' => $forcedAgentId]);
         }
 
-        // ✅ تعيين الاشتراك تلقائي حسب work_categories_id
         $wcId = (int) $request->input('work_categories_id');
         $autoMap = [
             19 => 10,
@@ -443,7 +786,6 @@ public function show(Institucion $institucion)
             ? 'required|exists:insurance_agents,id'
             : 'exists:insurance_agents,id';
 
-        // ✅ الفالديشن
         $validated = $request->validate([
             'name'               => 'required|string|max:255',
             'work_categories_id' => 'required|exists:work_categories,id',
@@ -451,7 +793,6 @@ public function show(Institucion $institucion)
             'insurance_agent_id' => $agentRule,
         ]);
 
-        // --- تحقق التشابه قبل الحفظ ---
         $baseNorm   = $this->normalizeName($validated['name']);
         $baseTokens = $this->nameTokens($baseNorm);
         $head       = $baseTokens[0] ?? null;
@@ -501,7 +842,6 @@ public function show(Institucion $institucion)
 
               $threshold = mb_strlen($baseNorm) <= 6 ? 70 : 90;
 
-                // ✅ لو الاسم كلمة وحدة ومتطابق تمامًا → اعتبره تشابه 100%
                 if ($isSingleWordBase && $baseNorm === $candNorm) {
                     $conflicts[] = [
                         'id'      => $row->id,
@@ -510,7 +850,6 @@ public function show(Institucion $institucion)
                     ];
                 }
 
-                // ✅ وإلا طبق العتبة الديناميكية
                 elseif ($similar && max($overlap, $jaccard) >= $threshold) {
                     $conflicts[] = [
                         'id'      => $row->id,
@@ -536,10 +875,8 @@ public function show(Institucion $institucion)
                 ->with('similar_conflicts', $conflicts);
         }
 
-        // --- مافيش تشابه عالي، نكمل الحفظ ---
         $data = $validated;
 
-        // ✅ حالة الوكيل
         $data['status'] = $user->hasRole('Wakeel') ? 0 : 1;
 
         $inst = \App\Models\Institucion::create($data);
@@ -557,7 +894,6 @@ public function show(Institucion $institucion)
 
 
 
-// App\Http\Controllers\InstitucionController.php
 
 // public function transferCustomers(Request $request, Institucion $institucion)
 // {
@@ -951,18 +1287,17 @@ public function transferStore(Request $request, Institucion $institucion)
 //         ->with('success', 'تم تفعيل الجهة');
 // }
 
-
 public function toggleStatus(Institucion $institucion, Request $request)
 {
-    // لو الجهة نشطة → إيقاف مباشر
     if ((int) $institucion->status === 1) {
         $institucion->status = 0;
         $institucion->save();
-        return redirect()->route('institucions.show', $institucion)
+
+        return redirect()
+            ->route('institucions.show', $institucion)
             ->with('success', 'تم إيقاف الجهة');
     }
 
-    // دالة لفحص التشابه
     $buildConflicts = function () use ($institucion) {
         $baseRaw    = $institucion->name;
         $baseNorm   = $this->normalizeName($baseRaw);
@@ -972,7 +1307,7 @@ public function toggleStatus(Institucion $institucion, Request $request)
         if (empty($baseTokens)) return $conflicts;
 
         $others = \App\Models\Institucion::where('id', '!=', $institucion->id)
-            ->select('id','name')->get();
+            ->select('id', 'name')->get();
 
         foreach ($others as $row) {
             $candNorm   = $this->normalizeName($row->name);
@@ -995,34 +1330,43 @@ public function toggleStatus(Institucion $institucion, Request $request)
         return $conflicts;
     };
 
-    // تفعيل عادي (بدون force)
     if (!$request->boolean('force')) {
         $conflicts = $buildConflicts();
+
         if (!empty($conflicts)) {
-            return redirect()->route('institucions.show', $institucion)
+            return redirect()
+                ->route('institucions.show', $institucion)
                 ->with('similar_warning', 'هناك جهات مسجّلة بأسماء مشابهة')
                 ->with('similar_conflicts', $conflicts);
-        } else {
-            if ($request->filled('code') && $request->filled('child_id')) {
-                $institucion->code = $request->input('code');
-                $institucion->workplace_code_id = $request->input('child_id');
-            }
-
-            $institucion->status = 1;
-            $institucion->save();
-
-            return redirect()->route('institucions.show', $institucion)
-                ->with('success', 'تم تفعيل الجهة بنجاح (بدون تشابه)');
         }
+
+        if (!$request->filled('code') || (!$request->filled('child_id') && !$request->filled('parent_id'))) {
+            return redirect()
+                ->route('institucions.show', $institucion)
+                ->with('need_code', true);
+        }
+
+        $institucion->code = $request->input('code');
+        $institucion->workplace_code_id = $request->input('child_id') ?: $request->input('parent_id');
+        $institucion->status = 1;
+        $institucion->save();
+
+        return redirect()
+            ->route('institucions.show', $institucion)
+            ->with('success', 'تم تفعيل الجهة بنجاح');
     }
 
-    // تفعيل رغم التشابه (force)
     if ($request->boolean('force')) {
-        if ($request->filled('code') && $request->filled('child_id')) {
-            $institucion->code = $request->input('code');
-            $institucion->workplace_code_id = $request->input('child_id');
+        if (!$request->filled('code') || (!$request->filled('child_id') && !$request->filled('parent_id'))) {
+            return redirect()
+                ->route('institucions.show', $institucion)
+                ->with('need_code', true)
+                ->with('similar_warning', 'هناك جهات مسجّلة بأسماء مشابهة')
+                ->with('similar_conflicts', $buildConflicts());
         }
 
+        $institucion->code = $request->input('code');
+        $institucion->workplace_code_id = $request->input('child_id') ?: $request->input('parent_id');
         $institucion->status = 1;
         $institucion->save();
 
@@ -1031,9 +1375,13 @@ public function toggleStatus(Institucion $institucion, Request $request)
             $ids = array_column($conflicts, 'id');
             \App\Models\Customer::whereIn('institucion_id', $ids)
                 ->update(['institucion_id' => $institucion->id]);
+
+             \App\Models\Institucion::whereIn('id', $ids)
+              ->update(['status' => 0]);
         }
 
-        return redirect()->route('institucions.show', $institucion)
+        return redirect()
+            ->route('institucions.show', $institucion)
             ->with('success', 'تم التفعيل ونُقل المشتركين من الجهات المشابهة');
     }
 }
@@ -1041,60 +1389,40 @@ public function toggleStatus(Institucion $institucion, Request $request)
 
 
 
-
-
-
-
-
-
-
-    /**
-     * normalizeName: توحيد/تنظيف عربي بدون Normalizer
-     */
+  
     private function normalizeName(string $name): string
     {
         $s = mb_strtolower($name, 'UTF-8');
 
-        // إزالة أي نص داخل أقواس
         $s = preg_replace('/\(.+?\)/u', ' ', $s);
 
-        // توحيد بعض الحروف
         $map = [
             'أ'=>'ا','إ'=>'ا','آ'=>'ا',
             'ى'=>'ي','ئ'=>'ي',
             'ؤ'=>'و',
             'ة'=>'ه',
-            'ـ'=>'', // تطويل
+            'ـ'=>'',  
         ];
         $s = strtr($s, $map);
 
-        // إزالة التشكيل (حركات عربية)
         $s = preg_replace('/[\x{0610}-\x{061A}\x{064B}-\x{065F}\x{0670}\x{06D6}-\x{06DC}\x{06DF}-\x{06E8}\x{06EA}-\x{06ED}]/u', '', $s);
 
-        // تحويل الأرقام الهندية لعربية
         $nums = ['٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9'];
         $s = strtr($s, $nums);
 
-        // إزالة الرموز إلى مسافة، ثم توحيد المسافات
         $s = preg_replace('/[^\p{Arabic}\p{L}\p{N}\s]+/u', ' ', $s);
         $s = preg_replace('/\s+/u', ' ', $s);
 
         return trim($s);
     }
 
-    /**
-     * nameTokens: ترجع كلمات مُرتبة بعد تنظيف بادئات/تعريف وإزالة كلمات عامة/كيانات.
-     */
+ 
     private function nameTokens(string $normalized): array
     {
         $stop = [
-            // أشكال الكيان:
             'شركة','شركه','مصحة','مصحه','مؤسسة','مؤسسه','مركز','مجمع','مكتب','عيادة','عياده','مصرف','بنك',
-            // كلمات عامة:
             'ليبيا','الليبيه','الليبية','العربيه','العربية','الدولي','الدولية','الوطني','الوطنيه','للخدمات','للعلاج','للطب','العلاج','الخدمات',
-            // أدوات وربط:
             'ال','و','في','على','من','الى','إلى','بن','ابن','ذات','قسم','فرع','اداره','إدارة','لل',
-            // اختصارات:
             'ذمم','ذ.م.م','ltd','co','inc'
         ];
 
@@ -1102,23 +1430,19 @@ public function toggleStatus(Institucion $institucion, Request $request)
         $tokens = [];
 
         foreach ($parts as $w) {
-            // إزالة بادئات عربية ملتصقة: بال/وال/فال/كال/لل
             $w = preg_replace('/^(بال|وال|فال|كال)/u', '', $w);
-            // إزالة (و|ف|ب|ك|ل)?ال
             $w = preg_replace('/^(و|ف|ب|ك|ل)?ال/u', '', $w);
-            // احتياط: إزالة حرف بادئ منفصل
             $w = preg_replace('/^[وفبكل]/u', '', $w);
 
             if (mb_strlen($w) < 2) continue;
             if (in_array($w, $stop, true)) continue;
 
-            $tokens[] = $w; // نحافظ على الترتيب
+            $tokens[] = $w; 
         }
 
         return $tokens;
     }
 
-    /** Jaccard similarity (0..100) */
     private function jaccardSimilarity(array $a, array $b): float
     {
         if (empty($a) && empty($b)) return 100.0;
@@ -1133,7 +1457,6 @@ public function toggleStatus(Institucion $institucion, Request $request)
         return (count($intersect) / max(1, count($union))) * 100.0;
     }
 
-    /** Overlap coefficient (0..100) */
     private function overlapCoefficient(array $a, array $b): float
     {
         if (empty($a) || empty($b)) return 0.0;

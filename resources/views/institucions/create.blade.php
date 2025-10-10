@@ -89,7 +89,7 @@
                         </div>
 
 
-                        @role('insurance-manager|admin')
+                        {{-- @role('insurance-manager|admin')
                             <div class="col-md-6">
                                 <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
                                     الترميز (اختياري)
@@ -100,6 +100,50 @@
                                 <div style="color:#6b7280;font-size:13px;margin-top:6px;">
                                     الحقل غير فريد — قد تتشارك عدة جهات نفس الترميز.
                                 </div>
+                            </div>
+                        @endrole --}}
+
+
+                        @role('insurance-manager|admin')
+                            <div class="col-md-12">
+                                <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
+                                    الترميز (اختياري)
+                                </label>
+
+                                <div class="row g-2">
+                                    {{-- التصنيف الرئيسي --}}
+                                    <div class="col-md-4">
+                                        <select id="main-code" name="parent_id" class="form-select"
+                                            style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;
+                    border-radius:999px;padding:10px 14px;font-size:1rem;outline:none;">
+                                            <option value="">اختر التصنيف الرئيسي</option>
+                                            @foreach ($parents as $p)
+                                                <option value="{{ $p->id }}" data-code="{{ $p->code }}">
+                                                    {{ $p->name }} ({{ $p->code }})
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    {{-- التصنيف الفرعي --}}
+                                    <div class="col-md-4">
+                                        <select id="child-code" name="child_id" class="form-select"
+                                            style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;
+                    border-radius:999px;padding:10px 14px;font-size:1rem;outline:none;"
+                                            disabled>
+                                            <option value="">اختر التصنيف الفرعي</option>
+                                        </select>
+                                    </div>
+
+                                    {{-- الكود النهائي (يُعرض هنا) --}}
+                                    <div class="col-md-4">
+                                        <input type="text" id="final-code" name="code" class="form-control" readonly
+                                            style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;
+                    border-radius:999px;padding:10px 14px;font-size:1rem;outline:none;color:#92400E;font-weight:700;">
+                                    </div>
+                                </div>
+
+
                             </div>
                         @endrole
 
@@ -124,7 +168,7 @@
                         @if ($showAgentSelect)
                             <div class="col-md-6">
                                 <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
-                                    الوكيل التأميني (اختياري)
+                                    الوكيل التأميني
                                 </label>
                                 <select name="insurance_agent_id" class="form-control"
                                     style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;">
@@ -168,16 +212,14 @@
                                 الترخيص</label>
                             <input type="file" name="license_number" class="form-control"
                                 style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
-                                accept=".pdf,.jpg,.jpeg,.png"
-                                required>
+                                accept=".pdf,.jpg,.jpeg,.png">
                         </div>
                         <div class="col-md-6">
                             <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">ملف
                                 السجل التجاري</label>
                             <input type="file" name="commercial_record" class="form-control"
                                 style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
-                                accept=".pdf,.jpg,.jpeg,.png"
-                                required>
+                                accept=".pdf,.jpg,.jpeg,.png">
                         </div>
                     </div>
                 </div>
@@ -224,33 +266,275 @@
     </div>
 @endsection
 
+{{-- @push('scripts')
+    {{-- مكتبات مساعدة --}}
+{{-- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<script>
+    // 🟠 سكربت إدارة الترميز (التصنيف الرئيسي + الفرعي + الجزء الإضافي)
+    document.addEventListener('DOMContentLoaded', function() {
+        const parentSel = document.getElementById('main-code');
+        const childSel = document.getElementById('child-code');
+        const extraInp = document.getElementById('extra-code');
+        const preview = document.getElementById('preview-code');
+        const finalInp = document.getElementById('final-code');
+
+        // ✅ دالة لتحديث الكود النهائي في الوقت الفعلي
+        function updateFinal() {
+            const parentCode = parentSel.options[parentSel.selectedIndex]?.dataset.code || '';
+            const childCode = childSel.options[childSel.selectedIndex]?.dataset.code || '';
+            const extra = extraInp.value.trim();
+            const fullCode = parentCode + childCode + extra;
+            preview.textContent = fullCode;
+            finalInp.value = fullCode;
+        }
+
+        // ✅ عند اختيار التصنيف الرئيسي → نجلب الفروع
+        parentSel.addEventListener('change', function() {
+            const parentId = this.value;
+            childSel.innerHTML = '<option value="">اختر التصنيف الفرعي (اختياري)</option>';
+            childSel.disabled = true;
+            updateFinal();
+
+            if (parentId) {
+                fetch(`/workplace-codes/${parentId}/children`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.length > 0) {
+                            data.forEach(item => {
+                                const opt = document.createElement('option');
+                                opt.value = item.id;
+                                opt.dataset.code = item.code;
+                                opt.textContent = `${item.name} (${item.code})`;
+                                childSel.appendChild(opt);
+                            });
+                            childSel.disabled = false;
+                        }
+                    });
+            }
+        });
+
+        // ✅ أي تغيير في التصنيف الفرعي أو الجزء الإضافي يحدث الكود
+        childSel.addEventListener('change', updateFinal);
+        extraInp.addEventListener('input', updateFinal);
+    });
+</script>
+
+<script>
+    // 🟢 سكربت فحص شيت الإكسل قبل الحفظ
+    (function() {
+        const select = document.getElementById('work_categories_id');
+        const docsCard = document.getElementById('docs-card');
+
+        // ✅ إظهار/إخفاء كارت السجل التجاري حسب نوع الجهة
+        function toggleDocs() {
+            const opt = select.options[select.selectedIndex];
+            const requires = opt ? opt.getAttribute('data-requires') === '1' : false;
+            docsCard.style.display = requires ? '' : 'none';
+        }
+
+        select.addEventListener('change', toggleDocs);
+        toggleDocs();
+
+        // ✅ فحص شيت الإكسل قبل الإرسال
+        const form = document.querySelector('form[action="{{ route('institucions.store') }}"]');
+        const fileInput = document.getElementById('excel_sheet');
+        const hiddenCount = document.getElementById('excel_rows');
+        let confirmed = false;
+
+        form.addEventListener('submit', function(e) {
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0 || confirmed) return true;
+
+            e.preventDefault();
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, {
+                        type: 'array'
+                    });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const ws = workbook.Sheets[firstSheetName];
+                    const rows = XLSX.utils.sheet_to_json(ws, {
+                        header: 1,
+                        blankrows: false
+                    });
+                    const dataRows = rows.slice(1);
+                    const count = dataRows.filter(r => r.some(cell => String(cell ?? '').trim() !== ''))
+                        .length;
+
+                    if (hiddenCount) hiddenCount.value = count;
+
+                    Swal.fire({
+                        title: 'تأكيد الاستيراد',
+                        html: `تم العثور على <b>${count}</b> صف في شيت الإكسل.<br>هل تريدين متابعة الحفظ؟`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'نعم، احفظ',
+                        cancelButtonText: 'إلغاء'
+                    }).then((res) => {
+                        if (res.isConfirmed) {
+                            confirmed = true;
+                            const btn = form.querySelector('button[type="submit"]');
+                            if (btn) {
+                                btn.disabled = true;
+                                btn.innerHTML =
+                                    '<i class="fa fa-spinner fa-spin"></i> جاري الحفظ...';
+                            }
+                            form.submit();
+                        }
+                    });
+                } catch (err) {
+                    console.error(err);
+                    Swal.fire({
+                        title: 'تنبيه',
+                        text: 'حدث خطأ أثناء قراءة ملف الإكسل. سيتم متابعة الحفظ بدون فحص الصفوف.',
+                        icon: 'warning',
+                        confirmButtonText: 'متابعة الحفظ'
+                    }).then(() => form.submit());
+                }
+            };
+
+            reader.onerror = function() {
+                Swal.fire({
+                    title: 'خطأ في الملف',
+                    text: 'تعذر قراءة ملف الإكسل. سيتم متابعة الحفظ بدون تأكيد العدد.',
+                    icon: 'warning',
+                    confirmButtonText: 'متابعة الحفظ'
+                }).then(() => form.submit());
+            };
+
+            reader.readAsArrayBuffer(fileInput.files[0]);
+        });
+    })();
+</script> --}}
+{{-- @endpush --}} --
+
+
 @push('scripts')
+    <!-- مكتبات SweetAlert و Excel -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
+    <!-- ===============================
+    🟠 1. سكربت الترميز الذكي (نهائي)
+    ================================ -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const mainSel = document.getElementById('main-code');
+            const childSel = document.getElementById('child-code');
+            const codeInp = document.querySelector('input[name="code"]');
+
+            let lockedPrefix = ''; // الجزء الثابت من الكود مثل "MO.H."
+
+            // 🔹 تنظيف النصوص من المسافات والنقاط الزائدة
+            const clean = str => (str || '').trim().replace(/[.\s]+/g, '').toUpperCase();
+
+            // 🔹 بناء الجزء الثابت
+            function buildPrefix() {
+                const main = clean(mainSel.options[mainSel.selectedIndex]?.dataset.code || '');
+                const child = clean(childSel.options[childSel.selectedIndex]?.dataset.code || '');
+
+                const parts = [main, child].filter(Boolean);
+                lockedPrefix = parts.length ? parts.join('.') + '.' : '';
+
+                codeInp.value = lockedPrefix;
+                codeInp.removeAttribute('readonly');
+                setTimeout(() => {
+                    codeInp.focus();
+                    codeInp.setSelectionRange(codeInp.value.length, codeInp.value.length);
+                }, 50);
+            }
+
+            // 🔹 تحميل الفروع عند اختيار الرئيسي
+            mainSel.addEventListener('change', function() {
+                const parentId = this.value;
+                childSel.innerHTML = '<option value="">اختر التصنيف الفرعي</option>';
+                childSel.disabled = true;
+
+                if (parentId) {
+                    fetch(`/workplace-codes/${parentId}/children`)
+                        .then(res => res.json())
+                        .then(data => {
+                            data.forEach(item => {
+                                const opt = document.createElement('option');
+                                opt.value = item.id;
+                                opt.dataset.code = clean(item.code);
+                                opt.textContent = `${item.name} (${clean(item.code)})`;
+                                childSel.appendChild(opt);
+                            });
+                            childSel.disabled = false;
+                        });
+                }
+
+                buildPrefix();
+            });
+
+            // 🔹 عند اختيار الفرعي
+            childSel.addEventListener('change', buildPrefix);
+
+            // 🔹 منع حذف أو تعديل الجزء الثابت
+            codeInp.addEventListener('keydown', function(e) {
+                const cursorPos = this.selectionStart;
+                const protectedZone = cursorPos <= lockedPrefix.length;
+                const blockedKeys = ['Backspace', 'Delete', 'ArrowLeft'];
+
+                if (protectedZone && blockedKeys.includes(e.key)) {
+                    e.preventDefault();
+                }
+            });
+
+            // 🔹 تصحيح أي محاولة لمسح الجزء الثابت
+            codeInp.addEventListener('input', function() {
+                if (!this.value.startsWith(lockedPrefix)) {
+                    this.value = lockedPrefix;
+                }
+            });
+
+            // 🔹 افتراضياً يكون مقفول
+            codeInp.setAttribute('readonly', true);
+        });
+    </script>
+
+    <!-- ===============================
+    🟢 2. سكربت إظهار/إخفاء حقول السجل التجاري
+    ================================ -->
     <script>
         (function() {
             const select = document.getElementById('work_categories_id');
             const docsCard = document.getElementById('docs-card');
+            if (!select || !docsCard) return;
 
             function toggleDocs() {
                 const opt = select.options[select.selectedIndex];
                 const requires = opt ? opt.getAttribute('data-requires') === '1' : false;
                 docsCard.style.display = requires ? '' : 'none';
             }
+
             select.addEventListener('change', toggleDocs);
             toggleDocs();
+        })();
+    </script>
 
+    <!-- ===============================
+    🔵 3. سكربت قراءة ملف الإكسل قبل الحفظ
+    ================================ -->
+    <script>
+        (function() {
             const form = document.querySelector('form[action="{{ route('institucions.store') }}"]');
             const fileInput = document.getElementById('excel_sheet');
             const hiddenCount = document.getElementById('excel_rows');
+            if (!form || !fileInput) return;
+
             let confirmed = false;
 
             form.addEventListener('submit', function(e) {
-                if (!fileInput || !fileInput.files || fileInput.files.length === 0 || confirmed) return true;
+                if (!fileInput.files || fileInput.files.length === 0 || confirmed) return true;
 
                 e.preventDefault();
                 const reader = new FileReader();
+
                 reader.onload = function(evt) {
                     try {
                         const data = new Uint8Array(evt.target.result);
@@ -271,7 +555,7 @@
 
                         Swal.fire({
                             title: 'تأكيد الاستيراد',
-                            html: `تم العثور على <b>${count}</b> موظفين في شيت الإكسل.<br>هل تريدين إكمال الحفظ؟`,
+                            html: `تم العثور على <b>${count}</b> صفًا في ملف الإكسل.<br>هل تريدين متابعة الحفظ؟`,
                             icon: 'question',
                             showCancelButton: true,
                             confirmButtonText: 'نعم، احفظ',
@@ -292,7 +576,7 @@
                         console.error(err);
                         Swal.fire({
                             title: 'تنبيه',
-                            text: 'تعذر قراءة شيت الإكسل في المتصفح. سيتم متابعة الحفظ بدون تأكيد العدد.',
+                            text: 'حدث خطأ أثناء قراءة الملف. سيتم الحفظ بدون تأكيد العدد.',
                             icon: 'warning',
                             confirmButtonText: 'متابعة الحفظ'
                         }).then(() => form.submit());
@@ -311,10 +595,5 @@
                 reader.readAsArrayBuffer(fileInput.files[0]);
             });
         })();
-
-
-
-
-
     </script>
 @endpush

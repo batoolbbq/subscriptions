@@ -118,7 +118,7 @@
         </div>
 
         @if ($dependents->count())
-            <h4 class="section-title">المشتركين الفرعيين</h4>
+            <h4 class="section-title">المنتفعين</h4>
             <div class="info-grid">
                 @foreach ($dependents as $dep)
                     <div class="info-item">

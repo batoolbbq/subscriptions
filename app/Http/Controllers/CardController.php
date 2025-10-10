@@ -575,14 +575,6 @@ public function indexApi()
 
 
 
-
-
-
-
-
-
-
-
      public function printed($customers_id)
     {
         $perslast = Personalphotos::where('customers_id', $customers_id)->orderBy('id', 'desc')->first();
@@ -612,7 +604,7 @@ public function indexApi()
             }
             $perslast->printed = $perslast->printed + 1;
             $perslast->save();
-ActivityLogger::activity("Customer ID " . $customers_id . " photo taken by user id " . Auth()->user()->id . " with username " . Auth()->user()->username . " with personalphoto id " . $perslast->id);
+            ActivityLogger::activity("Customer ID " . $customers_id . " photo taken by user id " . Auth()->user()->id . " with username " . Auth()->user()->username . " with personalphoto id " . $perslast->id);
 
             $customer = Customer::findOrFail($customers_id);
             

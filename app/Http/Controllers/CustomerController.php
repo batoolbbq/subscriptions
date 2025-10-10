@@ -32,10 +32,12 @@ use Mpdf\Config\ConfigVariables;
 use Mpdf\Config\FontVariables;
 use App\Models\ServiceLog;
 
+use Illuminate\Support\Facades\Cache;
 
 
 
 
+use App\Services\CustomerRegistrationService;
 
 use App\Services\CustomerretiredService;
 use App\Services\SmsApiServiceLibyana;
@@ -1409,6 +1411,24 @@ class CustomerController extends Controller
         }
     }
 
+    public function register(Request $request)
+    {
+       return $result = CustomerRegistrationService::register($request->all());
+
+        if ($result['success']) {
+            return response()->json([
+                'status' => true,
+                'message' => $result['message'],
+                'customer_id' => $result['customer_id'],
+            ]);
+        }
+        if ($result['success']) {
+            return redirect()->route('customers.show', $result['customer_id'])
+                            ->with('success', $result['message']);
+        }
+
+    }
+
 
    protected function generateRegNumber($benefCatId, $cityCode, $gender, $yearBirth)
 {
@@ -1441,28 +1461,61 @@ class CustomerController extends Controller
 
 
 
-      public function getpendingCustomers()
-    {
-        $customers = Customer::where('active', 2)
-        ->get([
-            'subscription_id',
-            'iban',
-            'bank_branch_id',
-            'total_pension',
-            'account_no',
-            'institucion_id',
-            'bank_id',
-            'regnumber',
-            'uuid',
-            'nationalID',
-            'active',
-            'payment_status',
-            'municipals_id',
-            'fullnamea'
-        ]);     
-           return response()->json($customers);
-    }
+    //   public function getpendingCustomers()
+    // {
+    //     $customers = Customer::where('active', 2)
+    //     ->get([
+    //         'subscription_id',
+    //         'iban',
+    //         'bank_branch_id',
+    //         'total_pension',
+    //         'account_no',
+    //         'institucion_id',
+    //         'bank_id',
+    //         'regnumber',
+    //         'uuid',
+    //         'nationalID',
+    //         'active',
+    //         'payment_status',
+    //         'municipals_id',
+    //         'fullnamea'
+    //     ]);     
+    //        return response()->json($customers);
+    // }
 
+
+   public function getpendingCustomers()
+    {
+        $customers = Customer::query()
+            ->leftJoin('institucion_sheet_rows', 'institucion_sheet_rows.national_id', '=', 'customers.nationalID')
+            ->where('customers.active', 2)
+            ->select(
+                'customers.id',
+                'customers.subscription_id',
+                'customers.iban',
+                'customers.bank_branch_id',
+                'customers.total_pension',
+                'customers.account_no',
+                'customers.bank_id',
+                'customers.regnumber',
+                'customers.uuid',
+                'customers.nationalID',
+                'customers.active',
+                'customers.payment_status',
+                'customers.municipals_id',
+                'customers.fullnamea',
+                // الشرط القوي 👇
+                \DB::raw('CASE 
+                            WHEN institucion_sheet_rows.id IS NULL THEN NULL
+                            WHEN institucion_sheet_rows.institucion_id = customers.institucion_id 
+                                THEN customers.institucion_id
+                            ELSE NULL
+                        END as institucion_id')
+            )
+            ->get();
+
+        return response()->json($customers);
+    }
 
        public function getInactiveCustomers()
     {
@@ -1471,34 +1524,50 @@ class CustomerController extends Controller
     }
  
 
-public function getpendingCustomerByUuid($uuid)
-{
-    $customer = Customer::where('uuid', $uuid)
-        ->where('active', 2)
-        ->first([
-            'subscription_id',
-            'iban',
-            'bank_branch_id',
-            'total_pension',
-            'account_no',
-            'institucion_id',
-            'bank_id',
-            'regnumber',
-            'uuid',
-            'nationalID',
-            'nid',
-            'active',
-            'payment_status',
-            'municipals_id',
-            'fullnamea'
-        ]);
+    public function getpendingCustomerByUuid($uuid)
+    {
+        $customer = Customer::with('institucionSheetRow')
+            ->where('uuid', $uuid)
+            ->where('active', 2)
+            ->first([
+                'id',
+                'subscription_id',
+                'iban',
+                'bank_branch_id',
+                'total_pension',
+                'account_no',
+                'institucion_id',
+                'bank_id',
+                'regnumber',
+                'uuid',
+                'nationalID',
+                'nid',
+                'active',
+                'payment_status',
+                'municipals_id',
+                'fullnamea'
+            ]);
 
-    if (!$customer) {
-        return response()->json(['message' => 'Customer not found or not active=2'], 404);
+        if (!$customer) {
+            return response()->json(['message' => 'Customer not found or not active=2'], 404);
+        }
+
+        // التحقق من الـ Excel row
+        if ($customer->institucionSheetRow) {
+            if ($customer->institucionSheetRow->institucion_id != $customer->institucion_id) {
+                $customer->institucion_id = null;
+            }
+        } else {
+            // مش موجود أصلاً في الاكسل → null
+            $customer->institucion_id = null;
+        }
+
+        // نمسح العلاقة من الـ response (عشان ما يطلعش object زايد)
+        unset($customer->institucionSheetRow);
+
+        return response()->json($customer);
     }
 
-    return response()->json($customer);
-}
 
 
 public function getInactiveCustomerByUuid($uuid)
@@ -1563,28 +1632,40 @@ public function bulkActivateToTwo(Request $request)
 }
 
 
-public function activateToTwo($uuid)
+public function changeCustomerStatus(Request $request, $uuid)
 {
     $customer = Customer::where('uuid', $uuid)->first();
 
     if (!$customer) {
-        return response()->json(['message' => 'Customer not found'], 404);
+        return response()->json(['message' => 'العميل غير موجود'], 404);
     }
 
-    if ($customer->active == 0) {
-        $customer->active = 2;
-        $customer->save();
+    // التحقق من أن القيمة الجديدة للحقل active صالحة (0 أو 1 أو 2)
+    $request->validate([
+        'active' => ['required', 'integer', Rule::in([0,1,2])]
+    ]);
 
+    $oldStatus = $customer->active;
+    $newStatus = $request->active;
+
+    // لو نفس القيمة
+    if ($oldStatus == $newStatus) {
         return response()->json([
-            'message' => 'Customer status updated from 0 to 1 successfully',
+            'message' => "العميل موجود بالفعل في الحالة {$newStatus}",
             'customer' => $customer
-        ]);
+        ], 200);
     }
+
+    // تحديث
+    $customer->active = $newStatus;
+    $customer->save();
 
     return response()->json([
-        'message' => 'Customer is not in state 0, so cannot change to 1'
-    ], 400);
+        'message' => "تم تغيير حالة العميل من {$oldStatus} إلى {$newStatus} بنجاح",
+        'customer' => $customer
+    ], 200);
 }
+
 
 
 public function activateAndPayment($uuid, Request $request)
@@ -1872,53 +1953,128 @@ public function bulkActivateAndPayment(Request $request)
 
 
 
-
-
-
-
-    public function sendotp($phone)
+ public function sendSms(Request $request)
     {
+        $request->validate([
+            'to'   => 'required|string',
+            'text' => 'required|string',
+            'from' => 'nullable|string',
+        ]);
 
-        $customer = Customer::where('phone', $phone)->first();
+        $url = 'http://10.110.110.35:8089/cgi-bin/sendsms';
 
-        // dd($customer);
-        if ($customer != null) {
-            //dd($customer);
-            return response()->json(['message' => 'رقم الهاتف مسجل مسبقا'], 500);
+        $response = Http::get($url, [
+            'username' => 'mdjsender',
+            'password' => 'mdj@321',
+            'from'     => $request->input('from', 'phif'),
+            'to'       => $request->input('to'),
+            'text'     => $request->input('text'),
+        ]);
+
+        if ($response->successful()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'تم إرسال الرسالة بنجاح',
+                'response' => $response->body(),
+            ]);
         }
 
-        $otp = mt_rand(100000, 999999);
-        $vendor = substr($phone, 1, 1);
-        if ($vendor != "1" && $vendor != "3") {
-            $states = $this->sms2->sendSms((string) $phone, $otp)->successful();
-        } else {
-            $states = $this->sms->sendSms((string) $phone, $otp)->successful();
-        }
-
-        if ($states) {
-            $ve = Verification::where('phone', $phone)->first();
-
-            if ($ve) {
-                DB::transaction(function () use ($ve, $otp) {
-                    $ve->otp = $otp;
-                    $ve->otp_time = now();
-                    $ve->save();
-                });
-            } else {
-                DB::transaction(function () use ($otp, $phone) {
-
-                    $Ve = new Verification();
-                    $Ve->otp = $otp;
-                    $Ve->phone = $phone;
-                    $Ve->otp_time = now();
-                    $Ve->save();
-                });
-            }
-            return response()->json(1);
-        } else {
-            return response()->json(5);
-        }
+        return response()->json([
+            'success' => false,
+            'message' => 'فشل الإرسال',
+            'status' => $response->status(),
+            'error' => $response->body(),
+        ], 500);
     }
+
+    /**
+     * إرسال OTP (رمز تحقق)
+     */
+    public function sendOtp(Request $request)
+    {
+        $request->validate([
+            'to' => 'required|string',
+        ]);
+
+        $otp = rand(100000, 999999); // توليد كود تحقق 6 أرقام
+        $message = "$otp";
+
+        $url = 'http://10.110.110.35:8089/cgi-bin/sendsms';
+
+        $response = Http::get($url, [
+            'username' => 'mdjsender',
+            'password' => 'mdj@321',
+            'from'     => 'phif',
+            'to'       => $request->input('to'),
+            'text'     => $message,
+        ]);
+
+        if ($response->successful()) {
+            // حفظ الـ OTP مؤقتًا (لمدة 5 دقائق)
+            Cache::put('otp_'.$request->input('to'), $otp, now()->addMinutes(5));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم إرسال رمز التحقق',
+                'otp' => $otp, // تقدر تشيله في الإنتاج
+                'response' => $response->body(),
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'فشل إرسال الرمز',
+            'status' => $response->status(),
+            'error' => $response->body(),
+        ], 500);
+    }
+
+
+
+
+    // public function sendotp($phone)
+    // {
+
+    //     $customer = Customer::where('phone', $phone)->first();
+
+    //     // dd($customer);
+    //     if ($customer != null) {
+    //         //dd($customer);
+    //         return response()->json(['message' => 'رقم الهاتف مسجل مسبقا'], 500);
+    //     }
+
+    //     $otp = mt_rand(100000, 999999);
+    //     $vendor = substr($phone, 1, 1);
+    //     if ($vendor != "1" && $vendor != "3") {
+    //         $states = $this->sms2->sendSms((string) $phone, $otp)->successful();
+    //     } else {
+    //         $states = $this->sms->sendSms((string) $phone, $otp)->successful();
+    //     }
+
+    //     if ($states) {
+    //         $ve = Verification::where('phone', $phone)->first();
+
+    //         if ($ve) {
+    //             DB::transaction(function () use ($ve, $otp) {
+    //                 $ve->otp = $otp;
+    //                 $ve->otp_time = now();
+    //                 $ve->save();
+    //             });
+    //         } else {
+    //             DB::transaction(function () use ($otp, $phone) {
+
+    //                 $Ve = new Verification();
+    //                 $Ve->otp = $otp;
+    //                 $Ve->phone = $phone;
+    //                 $Ve->otp_time = now();
+    //                 $Ve->save();
+    //             });
+    //         }
+    //         return response()->json(1);
+    //     } else {
+    //         return response()->json(5);
+    //     }
+    // }
 
     public function confirm(Request $request)
     {

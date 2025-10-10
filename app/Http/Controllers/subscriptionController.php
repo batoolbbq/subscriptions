@@ -15,7 +15,6 @@ use RealRashid\SweetAlert\Facades\Alert;
 use Illuminate\Support\Facades\Log;
 
 /**
- * يرسل الاشتراك إلى الـ API الخارجي.
  *
  * @param  \App\Models\Subscription $subscription
  * @param  \Illuminate\Support\Collection|array $validTypes  (مصفوفة/كولكشن من الأنواع المكتملة)
@@ -37,7 +36,7 @@ class SubscriptionController extends Controller
     public function create()
     {
         $workCategories = \App\Models\beneficiariesCategories::where('status', 1)->get();
-            $types = subscription_type::all(); // أو لو عندك فلترة: ->where('category', 'subscription_type')->get();
+            $types = subscription_type::all();
     
         return view('subscriptions.create', compact('workCategories','types'));
     }
@@ -155,24 +154,20 @@ class SubscriptionController extends Controller
 
     public function sendSubscriptionToApi($subscription, $validTypes)
     {
-        // إعدادات الاتصال ثابتة (بدون env)
         $apiBaseUrl  = 'http://192.168.81.17:6060';
         $apiEndpoint = '/admin/Subscriptions';
         $apiUser     = 'admin';
         $apiPass     = 'admin';
 
-        // ملاحظة: لو الـ API يتوقع 0 عند الإنشاء، خليه 0. لو يقبل id حقيقي، استخدم $subscription->id
         $payload = [
             'id'             => 1,
             'name'           => $subscription->name,
             'workCategoryId' => 1,
             'subscriptionValues' => collect($validTypes)->map(function ($data, $typeId) {
-                // لو مفاتيح المصفوفة هي IDs (1،2،3...) ممتاز؛ غير كذا نستخرج من داخل العنصر
                 $subscriptionTypeId = is_numeric($typeId) && (int)$typeId > 0
                     ? (int)$typeId
                     : (int)($data['subscription_type'] ?? $data['subscription_type_id'] ?? 0);
 
-                // حوّل 0/1 إلى Boolean للـ API
                 $isPercentage = isset($data['is_percentage'])
                     ? ((int)$data['is_percentage'] === 1)
                     : (bool)($data['isPercentage'] ?? false);
@@ -185,7 +180,7 @@ class SubscriptionController extends Controller
                     'status'       => (int)($data['status'] ?? 1),
                 ];
             })
-            ->filter(fn ($row) => $row['subscriptionType'] > 0) // تجاهل أي عنصر بدون نوع صالح
+            ->filter(fn ($row) => $row['subscriptionType'] > 0) 
             ->values()
             ->all(),
         ];
@@ -199,7 +194,6 @@ class SubscriptionController extends Controller
                 ->post(rtrim($apiBaseUrl, '/') . '/' . ltrim($apiEndpoint, '/'), $payload);
 
             if ($response->successful()) {
-                // (اختياري) تسجيل نجاح
                 Log::info('Subscriptions API success', [
                     'status' => $response->status(),
                     'api_response' => $response->json(),
@@ -209,11 +203,10 @@ class SubscriptionController extends Controller
                     'success'  => true,
                     'message'  => 'تم إرسال الاشتراك إلى الـ API بنجاح.',
                     'response' => $response->json(),
-                    'payload'  => $payload, // مفيد للتتبّع/الديبج
+                    'payload'  => $payload, 
                 ];
             }
 
-            // (اختياري) تسجيل خطأ
             Log::error('Subscriptions API error', [
                 'status'  => $response->status(),
                 'error'   => $response->body(),
@@ -331,7 +324,7 @@ class SubscriptionController extends Controller
 public function toggleStatus($id)
 {
     $subscription = Subscription::findOrFail($id);
-    $subscription->status = $subscription->status === '1' ? '0' : '1'; // نخزن كنص
+    $subscription->status = $subscription->status === '1' ? '0' : '1'; 
     $subscription->save();
 
     $message = $subscription->status === '1' 

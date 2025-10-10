@@ -127,7 +127,8 @@ Route::post('institucions/{institucion}/transfer', [\App\Http\Controllers\Instit
     return \App\Models\BankBranch::where('bank_id', $bankId)->distinct('name')->get(['id','name']);
     })->name('banks.branches');
 
-    Route::post('/customers/register/step3', [App\Http\Controllers\CustomerController::class, 'test44'])->name('customers.register.step3');
+    // Route::post('/customers/register/step3', [App\Http\Controllers\CustomerController::class, 'test44'])->name('customers.register.step3');
+    Route::post('/customers/register/step3', [CustomerController::class, 'register'])->name('customers.register.step3');
 
     Route::post('/CheckCustomer', [App\Http\Controllers\CustomerController::class, 'test'])->name('check-customer');
     // Route::post('/StoreCustomer', [App\Http\Controllers\CustomerController::class, 'saveCustomersByAdmin'])->name('store-customer');

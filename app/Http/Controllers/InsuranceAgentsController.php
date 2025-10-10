@@ -115,7 +115,48 @@ public function deactivate($id)
 
 
 
-    public function activate($id)
+    // public function activate($id)
+    // {
+    //     $agent = InsuranceAgents::findOrFail($id);
+
+    //     if ($agent->users()->exists()) {
+    //         return redirect()->back()->with('info', 'الوكيل مفعّل مسبقًا.');
+    //     }
+
+    //     $names = explode(' ', $agent->name, 2);
+
+    //     $user = new User();
+    //     $user->first_name = $names[0];
+    //     $user->last_name = $names[1] ?? '';
+    //     $user->username = $agent->email;
+    //     $user->email = $agent->email;
+    //     $user->phonenumber = $agent->phone_number;
+    //     $user->password = Hash::make($agent->phone_number);
+    //     $user->cities_id = $agent->cities_id;
+    //     $user->user_type_id = 3;
+    //     $user->active = 1;
+    //     $user->save();
+
+    //     $agent->users()->attach($user->id);
+
+    //     $role = Role::find(49);
+    //     if ($role && !$user->hasRole($role->name)) {
+    //         $user->assignRole($role->name);
+    //     }
+
+    //     $agent->status = 1;
+    //     $agent->save();
+
+    //     // استدعاء API الإرسال هنا
+    //     $this->postInsuranceAgent($agent->id);
+
+    //     return redirect()->back()->with('success', 'تم تفعيل وكيل التأمين، وإنشاء المستخدم، وإرسال البيانات إلى الـ API.');
+    // }
+
+
+
+
+    public function activate(Request $request, $id)
     {
         $agent = InsuranceAgents::findOrFail($id);
 
@@ -123,18 +164,27 @@ public function deactivate($id)
             return redirect()->back()->with('info', 'الوكيل مفعّل مسبقًا.');
         }
 
-        $names = explode(' ', $agent->name, 2);
+        if ($request->has('agent_code') && !empty($request->agent_code)) {
+            $request->validate([
+                'agent_code' => 'string|max:50|unique:insurance_agents,agent_code,' . $id,
+            ]);
+            $agent->agent_code = $request->agent_code;
+        }
 
+        $agent->status = 1;
+        $agent->save();
+
+        $names = preg_split('/\s+/', trim($agent->name), 2);
         $user = new User();
-        $user->first_name = $names[0];
-        $user->last_name = $names[1] ?? '';
-        $user->username = $agent->email;
-        $user->email = $agent->email;
-        $user->phonenumber = $agent->phone_number;
-        $user->password = Hash::make($agent->phone_number);
-        $user->cities_id = $agent->cities_id;
+        $user->first_name   = $names[0] ?? '';
+        $user->last_name    = $names[1] ?? '';
+        $user->username     = $agent->email;
+        $user->email        = $agent->email;
+        $user->phonenumber  = $agent->phone_number;
+        $user->password     = Hash::make($agent->phone_number);
+        $user->cities_id    = $agent->cities_id;
         $user->user_type_id = 3;
-        $user->active = 1;
+        $user->active       = 1;
         $user->save();
 
         $agent->users()->attach($user->id);
@@ -144,14 +194,17 @@ public function deactivate($id)
             $user->assignRole($role->name);
         }
 
-        $agent->status = 1;
-        $agent->save();
+        if (method_exists($this, 'postInsuranceAgent')) {
+            try {
+                $this->postInsuranceAgent($agent->id);
+            } catch (\Throwable $e) {
+                \Log::error("postInsuranceAgent failed for agent {$agent->id}: " . $e->getMessage());
+            }
+        }
 
-        // استدعاء API الإرسال هنا
-        $this->postInsuranceAgent($agent->id);
-
-        return redirect()->back()->with('success', 'تم تفعيل وكيل التأمين، وإنشاء المستخدم، وإرسال البيانات إلى الـ API.');
+        return redirect()->back()->with('success', 'تم تفعيل وكيل التأمين بنجاح.');
     }
+
 
   public function postInsuranceAgent($id)
     {
@@ -297,11 +350,16 @@ public function deactivate($id)
      */
     public function show($id)
     {
-        $insuranceAgents = insuranceAgents::with(['municipals' , 'cities'])->findOrFail($id);
-        return  view('insuranceAgents.show' , ['insuranceAgents' => $insuranceAgents]);
+        $insuranceAgent = InsuranceAgents::with(['municipals', 'cities', 'users'])->findOrFail($id);
 
+        $userExists = $insuranceAgent->users()->exists();
 
+        return view('insuranceAgents.show', [
+            'insuranceAgents' => $insuranceAgent,
+            'userExists' => $userExists,
+        ]);
     }
+
 
     /**
      * Show the form for editing the specified resource.
@@ -315,7 +373,6 @@ public function deactivate($id)
 
     $cities = City::orderBy('name')->pluck('name', 'id');
 
-    // بلديات المدينة الحالية فقط (لو تبغى كل البلديات احذف الشرط)
     $municipals = Municipal::get();
 
     return view('insuranceAgents.edit', compact('agent', 'cities', 'municipals'));

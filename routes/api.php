@@ -40,7 +40,7 @@ Route::get('/customers/{uuid}/inactive', [CustomerController::class, 'getInactiv
 
 Route::patch('/customers/bulk-activate-to-1', [CustomerController::class, 'bulkActivateToTwo']);
 
-Route::patch('/customers/{uuid}/activate-to-1', [CustomerController::class, 'activateToTwo']);
+Route::patch('/customers/{uuid}/activate', [CustomerController::class, 'changeCustomerStatus']);
 
 
 Route::post('/customers/bulk-activate-payment', [CustomerController::class, 'bulkActivateAndPayment']);
@@ -52,3 +52,5 @@ Route::post('/customers/{uuid}/activate-payment', [CustomerController::class, 'a
 
 
 
+Route::post('/send-sms', [CustomerController::class, 'sendSms']);
+Route::post('/send-otp', [CustomerController::class, 'sendOtp']);

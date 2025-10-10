@@ -8,11 +8,18 @@ use Illuminate\Database\Eloquent\Model;
 class Customer extends Model
 {
     use HasFactory;
+    protected $guarded = []; 
+
        
     public function cities()
     {
         return $this->belongsTo(City::class);
     }
+    public function institucionSheetRow()
+    {
+        return $this->hasOne(\App\Models\InstitucionSheetRow::class, 'national_id', 'nationalID');
+    }
+
     public function municipals()
     {
         return $this->belongsTo(Municipal::class);
