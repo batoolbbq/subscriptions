@@ -48,38 +48,37 @@ class InstitucionController extends Controller
 
 
   
-    public function create()
-    {
-        $user = Auth::user();
+   public function create()
+{
+    $user = Auth::user();
 
-         $parents = \App\Models\WorkplaceCode::whereNull('parent_id')->get();
+    $parents = \App\Models\WorkplaceCode::whereNull('parent_id')->get();
+    $workCategories  = WorkCategory::orderBy('name')->get();
+    $subscriptions   = Subscription::orderBy('id', 'desc')->get();
+    $agents          = collect();   
+    $requiresDocsIds = [20, 21];
 
+    $showAgentSelect    = false; 
+    $preselectedAgentId = null;  
 
-        $workCategories  = WorkCategory::orderBy('name')->get();
-        $subscriptions   = Subscription::orderBy('id', 'desc')->get();
-        $agents          = collect();   
-        $requiresDocsIds = [20, 21];
-
-        $showAgentSelect    = false; 
-        $preselectedAgentId = null;  
-
-        if ($user->hasRole('admin')) {
-            $showAgentSelect    = true;
-            $agents             = InsuranceAgents::select('id','name')->orderBy('name')->get();
-            $preselectedAgentId = old('insurance_agent_id');  
-        } elseif ($user->hasRole('Wakeel')) {
-            $preselectedAgentId = $user->insuranceAgents()->pluck('insurance_agents.id')->first();
-        } elseif ($user->hasRole('insurance-manager')) {
-            $preselectedAgentId = 94;  
-        } else {
-            abort(403, 'ليس لديك صلاحية لإضافة جهة عمل.');
-        }
-
-        return view('institucions.create', compact(
-            'workCategories','subscriptions','agents','requiresDocsIds',
-            'showAgentSelect','preselectedAgentId','parents'
-        ));
+    if ($user->hasRole('admin') || $user->hasRole('insurance-manager')) {
+        $showAgentSelect    = true;
+        $agents             = \App\Models\insuranceAgents::select('id', 'name')
+                                ->where('status', 1) 
+                                ->orderBy('name')
+                                ->get();
+        $preselectedAgentId = old('insurance_agent_id');  
+    } elseif ($user->hasRole('Wakeel')) {
+        $preselectedAgentId = $user->insuranceAgents()->pluck('insurance_agents.id')->first();
+    } else {
+        abort(403, 'ليس لديك صلاحية لإضافة جهة عمل.');
     }
+
+    return view('institucions.create', compact(
+        'workCategories','subscriptions','agents','requiresDocsIds',
+        'showAgentSelect','preselectedAgentId','parents'
+    ));
+}
 
    
     // public function store(Request $request)

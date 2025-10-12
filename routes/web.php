@@ -39,6 +39,10 @@ use Illuminate\Support\Facades\Validator;
 
     Auth::routes();
 
+    Route::get('/refresh-captcha', function () {
+    return response()->json(['captcha' => captcha_img()]);
+});
+
    
     Route::resource('workplace_codes', \App\Http\Controllers\WorkplaceCodeController::class);
 
@@ -232,5 +236,6 @@ Route::patch('institucions/{institucion}/toggle-status', [\App\Http\Controllers\
     ->name('institucions.toggle-status');
 
   
+
 
 });

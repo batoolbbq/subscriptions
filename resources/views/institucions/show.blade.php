@@ -194,6 +194,21 @@
                                 </div>
                             </div>
                         </div>
+
+                        @if ($institucion->code)
+                            <div class="row mb-1">
+                                <div class="col-md-12">
+                                    <div style="color:var(--muted);font-size:.85rem;margin-bottom:4px;">
+                                        ترميز الجهة
+                                    </div>
+                                    <div style="font-weight:700;color:var(--ink);direction:ltr;">
+                                        {{ $institucion->code }}
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+
                         <div class="row mb-1">
                             <div class="col-md-6">
                                 <div style="color:var(--muted);font-size:.85rem;margin-bottom:4px;">الرقم التجاري</div>
@@ -201,6 +216,8 @@
                                     {{ $institucion->commercial_number ?: '—' }}
                                 </div>
                             </div>
+
+
                             <div class="col-md-6">
                                 <div style="color:var(--muted);font-size:.85rem;margin-bottom:4px;">الوكيل التأميني</div>
                                 <div style="font-weight:700;color:var(--ink);">

@@ -1,32 +1,29 @@
 @extends('layouts.master')
 
+
 @section('title', 'إضافة جهة عمل')
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 @section('content')
-    <div class="container py-4"
-        style="font-family: 'Tajawal', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:#8C5346;">
+    <div class="container py-4" style="font-family:'Tajawal',sans-serif;color:#8C5346;">
 
-        {{-- العنوان وزر الرجوع --}}
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <div>
-                <h3 style="margin:0;font-weight:800;color:8C5346;">إضافة جهة عمل</h3>
-
-            </div>
-
-
-            <a href="{{ route('institucions.index') }}"
-                style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#6b7280;border:1.5px solid #D0D5DD;border-radius:999px;padding:8px 14px;font-weight:800;text-decoration:none;box-shadow:0 8px 18px rgba(0,0,0,.06);">
+        {{-- العنوان --}}
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 style="margin:0;font-weight:800;">إضافة جهة عمل</h3>
+            <a href="{{ route('institucions.index') }}" class="btn btn-light"
+                style="border:none;border-radius:999px;padding:10px 20px;box-shadow:0 3px 8px rgba(0,0,0,.1);">
                 <i class="fa fa-arrow-right"></i> رجوع للقائمة
             </a>
         </div>
 
         {{-- رسائل الأخطاء --}}
         @if ($errors->any())
-            <div
-                style="border:1.5px solid #fecaca;background:#fef2f2;padding:12px;border-radius:14px;margin-bottom:16px;box-shadow:0 10px 28px rgba(0,0,0,.08);color:#991b1b;">
-                <div style="font-weight:800;margin-bottom:6px;">تحقق من الحقول التالية:</div>
-                <ul style="margin:0;padding-inline-start:22px;">
+            <div style="background:#ffe5e5;color:#991b1b;padding:12px 18px;border-radius:16px;margin-bottom:18px;">
+                <strong>تحقق من الحقول التالية:</strong>
+                <ul style="margin:0;padding-inline-start:20px;">
                     @foreach ($errors->all() as $e)
                         <li>{{ $e }}</li>
                     @endforeach
@@ -38,84 +35,48 @@
             @csrf
             <input type="hidden" name="excel_rows" id="excel_rows">
 
-            {{-- البطاقة 1: الأساسيات --}}
-            <div
-                style="border:1.5px solid #E5E7EB;border-radius:24px;box-shadow:0 18px 40px rgba(0,0,0,.12);margin-bottom:16px;overflow:hidden;background:#fff;">
+            {{-- البطاقة 1 --}}
+            <div style="background:#fff;border-radius:24px;box-shadow:0 10px 24px rgba(0,0,0,.08);margin-bottom:24px;">
                 <div
-                    style="background:linear-gradient(135deg,#d95b00 0%,#F58220 35%,#FF8F34 70%,#ffb066 100%);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px;font-weight:800;">
-                    <span
-                        style="background:#FF8F34;color:#fff;width:34px;height:34px;display:grid;place-items:center;border-radius:999px;font-size:.95rem;box-shadow:0 10px 22px rgba(245,130,32,.35);">1</span>
-                    <h6 style="margin:0;font-weight:800;color:#ffffff;">أساسيات جهة العمل</h6>
+                    style="background:linear-gradient(135deg,#d95b00,#F58220,#FF8F34,#ffb066);
+                        color:#fff;padding:14px 18px;font-weight:800;border-radius:24px 24px 0 0;">
+                    <span style="background:#FF8F34;padding:5px 11px;border-radius:50%;">1</span> أساسيات جهة العمل
                 </div>
 
-                <div style="padding:22px 20px 26px;">
+                <div style="padding:24px 20px;">
                     <div class="row g-3">
+
+                        {{-- نوع الجهة --}}
                         <div class="col-lg-5">
-                            <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
-                                نوع جهة العمل <span style="color:#ef4444;">*</span>
-                            </label>
-                            @php
-                                $isWakeel = auth()->user()->hasRole('Wakeel');
-                                $publicCategoryIds = isset($publicCategoryIds) ? $publicCategoryIds : [19];
-                            @endphp
-                            <select id="work_categories_id" name="work_categories_id" class="form-control"
-                                style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
+                            <label class="fw-bold mb-2">نوع جهة العمل <span style="color:#ef4444;">*</span></label>
+                            <select id="work_categories_id" name="work_categories_id" class="form-control clean-input"
                                 required>
-                                <option value="" disabled {{ old('work_categories_id') ? '' : 'selected' }}>— اختر
-                                    النوع —</option>
+                                <option value="" disabled selected>— اختر النوع —</option>
                                 @foreach ($workCategories as $wc)
                                     @php
-                                        $isPublicForWakeel = $isWakeel && in_array($wc->id, $publicCategoryIds);
                                         $requires = in_array($wc->id, $requiresDocsIds ?? []) ? 1 : 0;
                                     @endphp
-                                    @continue($isPublicForWakeel)
-                                    <option value="{{ $wc->id }}" data-requires="{{ $requires }}"
-                                        {{ (string) old('work_categories_id') === (string) $wc->id ? 'selected' : '' }}>
+                                    <option value="{{ $wc->id }}" data-requires="{{ $requires }}">
                                         {{ $wc->name }}
                                     </option>
                                 @endforeach
                             </select>
-                            <div style="color:#6b7280;font-size:13px;margin-top:6px;">ستظهر حقول السجل والملفات تلقائيًا إذا
-                                كان النوع يتطلبها.</div>
                         </div>
 
+                        {{-- اسم الجهة --}}
                         <div class="col-lg-7">
-                            <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
-                                اسم جهة العمل <span style="color:#ef4444;">*</span>
-                            </label>
-                            <input type="text" name="name" class="form-control"
-                                style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
+                            <label class="fw-bold mb-2">اسم جهة العمل <span style="color:#ef4444;">*</span></label>
+                            <input type="text" name="name" class="form-control clean-input"
                                 value="{{ old('name') }}" placeholder="أدخل اسم الجهة" required>
                         </div>
 
-
-                        {{-- @role('insurance-manager|admin')
-                            <div class="col-md-6">
-                                <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
-                                    الترميز (اختياري)
-                                </label>
-                                <input type="text" name="code" class="form-control"
-                                    style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
-                                    value="{{ old('code') }}" placeholder="مثال: HR-TR-2025">
-                                <div style="color:#6b7280;font-size:13px;margin-top:6px;">
-                                    الحقل غير فريد — قد تتشارك عدة جهات نفس الترميز.
-                                </div>
-                            </div>
-                        @endrole --}}
-
-
+                        {{-- الترميز --}}
                         @role('insurance-manager|admin')
-                            <div class="col-md-12">
-                                <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
-                                    الترميز (اختياري)
-                                </label>
-
+                            <div class="col-md-12 mt-3">
+                                <label class="fw-bold mb-2">الترميز (اختياري)</label>
                                 <div class="row g-2">
-                                    {{-- التصنيف الرئيسي --}}
                                     <div class="col-md-4">
-                                        <select id="main-code" name="parent_id" class="form-select"
-                                            style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;
-                    border-radius:999px;padding:10px 14px;font-size:1rem;outline:none;">
+                                        <select id="main-code" name="parent_id" class="form-control clean-input">
                                             <option value="">اختر التصنيف الرئيسي</option>
                                             @foreach ($parents as $p)
                                                 <option value="{{ $p->id }}" data-code="{{ $p->code }}">
@@ -124,302 +85,174 @@
                                             @endforeach
                                         </select>
                                     </div>
-
-                                    {{-- التصنيف الفرعي --}}
                                     <div class="col-md-4">
-                                        <select id="child-code" name="child_id" class="form-select"
-                                            style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;
-                    border-radius:999px;padding:10px 14px;font-size:1rem;outline:none;"
-                                            disabled>
+                                        <select id="child-code" name="child_id" class="form-control clean-input" disabled>
                                             <option value="">اختر التصنيف الفرعي</option>
                                         </select>
                                     </div>
-
-                                    {{-- الكود النهائي (يُعرض هنا) --}}
                                     <div class="col-md-4">
-                                        <input type="text" id="final-code" name="code" class="form-control" readonly
-                                            style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;
-                    border-radius:999px;padding:10px 14px;font-size:1rem;outline:none;color:#92400E;font-weight:700;">
+                                        <input type="text" id="final-code" name="code" class="form-control clean-input"
+                                            readonly>
                                     </div>
                                 </div>
-
-
                             </div>
                         @endrole
 
-                        {{-- 
-                        <div class="col-md-6">
-                            <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
-                                الاشتراك <span style="color:#ef4444;">*</span>
-                            </label>
-                            <select name="subscriptions_id" class="form-control"
-                                style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
-                                required>
-                                <option value="" disabled selected>— اختر الاشتراك —</option>
-                                @foreach ($subscriptions as $s)
-                                    <option value="{{ $s->id }}"
-                                        {{ old('subscriptions_id') == $s->id ? 'selected' : '' }}>
-                                        {{ $s->name ?? 'اشتراك #' . $s->id }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div> --}}
-
-                        @if ($showAgentSelect)
-                            <div class="col-md-6">
-                                <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
-                                    الوكيل التأميني
-                                </label>
-                                <select name="insurance_agent_id" class="form-control"
-                                    style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;">
+                        {{-- الوكيل التأميني --}}
+                        @role('insurance-manager')
+                            <div class="col-md-6 mt-3">
+                                <label class="fw-bold mb-2">الوكيل التأميني (اختياري)</label>
+                                <select name="insurance_agent_id" id="insurance_agent_id"
+                                    class="form-control select2-agent clean-input">
                                     <option value="">— اختياري —</option>
                                     @foreach ($agents as $a)
-                                        <option value="{{ $a->id }}"
-                                            {{ (string) old('insurance_agent_id', (string) $preselectedAgentId) === (string) $a->id ? 'selected' : '' }}>
-                                            {{ $a->name ?? 'Agent #' . $a->id }}
-                                        </option>
+                                        <option value="{{ $a->id }}">{{ $a->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
                         @else
                             <input type="hidden" name="insurance_agent_id" value="{{ $preselectedAgentId }}">
-                        @endif
+                        @endrole
+
                     </div>
                 </div>
             </div>
 
-            {{-- البطاقة 2: بيانات السجل --}}
+            {{-- البطاقة 2 --}}
             <div id="docs-card"
-                style="display:none;border:1.5px solid #E5E7EB;border-radius:24px;box-shadow:0 18px 40px rgba(0,0,0,.12);margin-bottom:16px;overflow:hidden;background:#fff;">
+                style="display:none;background:#fff;border-radius:24px;box-shadow:0 10px 24px rgba(0,0,0,.08);margin-bottom:24px;">
                 <div
-                    style="background:linear-gradient(135deg,#d95b00 0%,#F58220 35%,#FF8F34 70%,#ffb066 100%);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px;font-weight:800;">
-                    <span
-                        style="background:#FF8F34;color:#fff;width:34px;height:34px;display:grid;place-items:center;border-radius:999px;font-size:.95rem;box-shadow:0 10px 22px rgba(245,130,32,.35);">2</span>
-                    <h6 style="margin:0;font-weight:800;color:#ffffff">بيانات السجل التجاري والترخيص</h6>
+                    style="background:linear-gradient(135deg,#d95b00,#F58220,#FF8F34,#ffb066);
+                        color:#fff;padding:14px 18px;font-weight:800;border-radius:24px 24px 0 0;">
+                    <span style="background:#FF8F34;padding:5px 11px;border-radius:50%;">2</span> بيانات السجل التجاري
+                    والترخيص
                 </div>
 
-                <div style="padding:22px 20px 26px;">
+                <div style="padding:24px 20px;">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">الرقم
-                                التجاري</label>
-                            <input type="text" name="commercial_number" class="form-control"
-                                style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
+                            <label class="fw-bold mb-2">الرقم التجاري</label>
+                            <input type="text" name="commercial_number" class="form-control clean-input"
                                 value="{{ old('commercial_number') }}" placeholder="مثال: 123456789">
                         </div>
                         <div class="col-md-6">
-                            <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">ملف
-                                الترخيص</label>
-                            <input type="file" name="license_number" class="form-control"
-                                style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
+                            <label class="fw-bold mb-2">ملف الترخيص</label>
+                            <input type="file" name="license_number" class="form-control clean-input"
                                 accept=".pdf,.jpg,.jpeg,.png">
                         </div>
                         <div class="col-md-6">
-                            <label style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">ملف
-                                السجل التجاري</label>
-                            <input type="file" name="commercial_record" class="form-control"
-                                style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
+                            <label class="fw-bold mb-2">ملف السجل التجاري</label>
+                            <input type="file" name="commercial_record" class="form-control clean-input"
                                 accept=".pdf,.jpg,.jpeg,.png">
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- البطاقة 3: استيراد الإكسل --}}
-            <div
-                style="border:1.5px solid #E5E7EB;border-radius:24px;box-shadow:0 18px 40px rgba(0,0,0,.12);margin-bottom:16px;overflow:hidden;background:#fff;">
+            {{-- البطاقة 3 --}}
+            <div style="background:#fff;border-radius:24px;box-shadow:0 10px 24px rgba(0,0,0,.08);margin-bottom:24px;">
                 <div
-                    style="background:linear-gradient(135deg,#d95b00 0%,#F58220 35%,#FF8F34 70%,#ffb066 100%);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:10px;font-weight:800;">
-                    <span
-                        style="background:#FF8F34;color:#fff;width:34px;height:34px;display:grid;place-items:center;border-radius:999px;font-size:.95rem;box-shadow:0 10px 22px rgba(245,130,32,.35);">3</span>
-                    <h6 style="margin:0;font-weight:800;color:#ffffff;">استيراد بيانات الموظفين / الحسابات</h6>
+                    style="background:linear-gradient(135deg,#d95b00,#F58220,#FF8F34,#ffb066);
+                        color:#fff;padding:14px 18px;font-weight:800;border-radius:24px 24px 0 0;">
+                    <span style="background:#FF8F34;padding:5px 11px;border-radius:50%;">3</span> استيراد بيانات الموظفين /
+                    الحسابات
                 </div>
 
-                <div style="padding:22px 20px 26px;">
-                    <div class="mb-3">
-                        <label for="excel_sheet" class="form-label"
-                            style="display:block;margin-bottom:6px;font-size:.95rem;font-weight:700;">
-                            شيت الإكسل (اختياري)
-                        </label>
-                        <input type="file" name="excel_sheet" id="excel_sheet" class="form-control"
-                            style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
-                            accept=".xlsx,.xls,.csv">
-
-                    </div>
+                <div style="padding:24px 20px;">
+                    <label class="fw-bold mb-2">شيت الإكسل (اختياري)</label>
+                    <input type="file" name="excel_sheet" id="excel_sheet" class="form-control clean-input"
+                        accept=".xlsx,.xls,.csv">
                 </div>
             </div>
 
-            {{-- الأزرار --}}
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            {{-- زر الحفظ --}}
+            <div class="text-center">
                 <button type="submit"
-                    onmouseover="this.style.filter='brightness(1.03)'; this.style.transform='translateY(-1px)';"
-                    onmouseout="this.style.filter='none'; this.style.transform='none';"
-                    style="all:unset;display:inline-flex;align-items:center;gap:8px;cursor:pointer;text-align:center;padding:13px 26px;border-radius:999px;font-weight:900;font-size:1rem;letter-spacing:.3px;
-                           background:#F58220;color:#fff;box-shadow:0 12px 26px rgba(245,130,32,.30);">
-                    حفظ الجهة
-                    <i class="fa-solid fa-circle-check"></i>
+                    style="border:none;border-radius:999px;padding:12px 28px;
+                background:#F58220;color:#fff;font-weight:900;font-size:1rem;box-shadow:0 8px 20px rgba(245,130,32,.35);">
+                    حفظ الجهة <i class="fa-solid fa-circle-check ms-2"></i>
                 </button>
-
-
             </div>
+
         </form>
     </div>
+
+    {{-- 🌈 تنسيق موحد للحقول --}}
+    <style>
+        .clean-input {
+            border: none !important;
+            border-radius: 12px;
+            background: #f9fafb;
+            padding: 12px 16px;
+            font-size: 1rem;
+            color: #333;
+            transition: 0.2s;
+            box-shadow: inset 0 0 0 1px #e0e0e0;
+        }
+
+        .clean-input:focus {
+            outline: none;
+            background: #fff;
+            box-shadow: inset 0 0 0 2px #F58220, 0 0 6px rgba(245, 130, 32, .3);
+        }
+
+        .select2-container--default .select2-selection--single {
+            border: none !important;
+            background: #f9fafb !important;
+            border-radius: 12px !important;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            box-shadow: inset 0 0 0 1px #e0e0e0;
+        }
+
+        .select2-selection__rendered {
+            color: #333 !important;
+            font-size: 1rem;
+            padding-right: 14px !important;
+        }
+
+        .select2-dropdown {
+            border-radius: 12px !important;
+            border: 1px solid #ddd !important;
+        }
+    </style>
+
 @endsection
-
-{{-- @push('scripts')
-    {{-- مكتبات مساعدة --}}
-{{-- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-<script>
-    // 🟠 سكربت إدارة الترميز (التصنيف الرئيسي + الفرعي + الجزء الإضافي)
-    document.addEventListener('DOMContentLoaded', function() {
-        const parentSel = document.getElementById('main-code');
-        const childSel = document.getElementById('child-code');
-        const extraInp = document.getElementById('extra-code');
-        const preview = document.getElementById('preview-code');
-        const finalInp = document.getElementById('final-code');
-
-        // ✅ دالة لتحديث الكود النهائي في الوقت الفعلي
-        function updateFinal() {
-            const parentCode = parentSel.options[parentSel.selectedIndex]?.dataset.code || '';
-            const childCode = childSel.options[childSel.selectedIndex]?.dataset.code || '';
-            const extra = extraInp.value.trim();
-            const fullCode = parentCode + childCode + extra;
-            preview.textContent = fullCode;
-            finalInp.value = fullCode;
-        }
-
-        // ✅ عند اختيار التصنيف الرئيسي → نجلب الفروع
-        parentSel.addEventListener('change', function() {
-            const parentId = this.value;
-            childSel.innerHTML = '<option value="">اختر التصنيف الفرعي (اختياري)</option>';
-            childSel.disabled = true;
-            updateFinal();
-
-            if (parentId) {
-                fetch(`/workplace-codes/${parentId}/children`)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.length > 0) {
-                            data.forEach(item => {
-                                const opt = document.createElement('option');
-                                opt.value = item.id;
-                                opt.dataset.code = item.code;
-                                opt.textContent = `${item.name} (${item.code})`;
-                                childSel.appendChild(opt);
-                            });
-                            childSel.disabled = false;
-                        }
-                    });
-            }
-        });
-
-        // ✅ أي تغيير في التصنيف الفرعي أو الجزء الإضافي يحدث الكود
-        childSel.addEventListener('change', updateFinal);
-        extraInp.addEventListener('input', updateFinal);
-    });
-</script>
-
-<script>
-    // 🟢 سكربت فحص شيت الإكسل قبل الحفظ
-    (function() {
-        const select = document.getElementById('work_categories_id');
-        const docsCard = document.getElementById('docs-card');
-
-        // ✅ إظهار/إخفاء كارت السجل التجاري حسب نوع الجهة
-        function toggleDocs() {
-            const opt = select.options[select.selectedIndex];
-            const requires = opt ? opt.getAttribute('data-requires') === '1' : false;
-            docsCard.style.display = requires ? '' : 'none';
-        }
-
-        select.addEventListener('change', toggleDocs);
-        toggleDocs();
-
-        // ✅ فحص شيت الإكسل قبل الإرسال
-        const form = document.querySelector('form[action="{{ route('institucions.store') }}"]');
-        const fileInput = document.getElementById('excel_sheet');
-        const hiddenCount = document.getElementById('excel_rows');
-        let confirmed = false;
-
-        form.addEventListener('submit', function(e) {
-            if (!fileInput || !fileInput.files || fileInput.files.length === 0 || confirmed) return true;
-
-            e.preventDefault();
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                try {
-                    const data = new Uint8Array(evt.target.result);
-                    const workbook = XLSX.read(data, {
-                        type: 'array'
-                    });
-                    const firstSheetName = workbook.SheetNames[0];
-                    const ws = workbook.Sheets[firstSheetName];
-                    const rows = XLSX.utils.sheet_to_json(ws, {
-                        header: 1,
-                        blankrows: false
-                    });
-                    const dataRows = rows.slice(1);
-                    const count = dataRows.filter(r => r.some(cell => String(cell ?? '').trim() !== ''))
-                        .length;
-
-                    if (hiddenCount) hiddenCount.value = count;
-
-                    Swal.fire({
-                        title: 'تأكيد الاستيراد',
-                        html: `تم العثور على <b>${count}</b> صف في شيت الإكسل.<br>هل تريدين متابعة الحفظ؟`,
-                        icon: 'question',
-                        showCancelButton: true,
-                        confirmButtonText: 'نعم، احفظ',
-                        cancelButtonText: 'إلغاء'
-                    }).then((res) => {
-                        if (res.isConfirmed) {
-                            confirmed = true;
-                            const btn = form.querySelector('button[type="submit"]');
-                            if (btn) {
-                                btn.disabled = true;
-                                btn.innerHTML =
-                                    '<i class="fa fa-spinner fa-spin"></i> جاري الحفظ...';
-                            }
-                            form.submit();
-                        }
-                    });
-                } catch (err) {
-                    console.error(err);
-                    Swal.fire({
-                        title: 'تنبيه',
-                        text: 'حدث خطأ أثناء قراءة ملف الإكسل. سيتم متابعة الحفظ بدون فحص الصفوف.',
-                        icon: 'warning',
-                        confirmButtonText: 'متابعة الحفظ'
-                    }).then(() => form.submit());
-                }
-            };
-
-            reader.onerror = function() {
-                Swal.fire({
-                    title: 'خطأ في الملف',
-                    text: 'تعذر قراءة ملف الإكسل. سيتم متابعة الحفظ بدون تأكيد العدد.',
-                    icon: 'warning',
-                    confirmButtonText: 'متابعة الحفظ'
-                }).then(() => form.submit());
-            };
-
-            reader.readAsArrayBuffer(fileInput.files[0]);
-        });
-    })();
-</script> --}}
-{{-- @endpush --}} --
 
 
 @push('scripts')
-    <!-- مكتبات SweetAlert و Excel -->
+    <!-- مكتبات JavaScript -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
+    <!-- CSS خاص بـ Select2 -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+    <!-- 💡 سكربت تفعيل البحث داخل الوكلاء -->
+    <script>
+        $(document).ready(function() {
+            if ($.fn.select2) {
+                $('.select2-agent').select2({
+                    placeholder: "ابحث باسم الوكيل...",
+                    allowClear: true,
+                    width: '100%',
+                    language: {
+                        noResults: function() {
+                            return "لا يوجد نتائج مطابقة";
+                        }
+                    }
+                });
+            } else {
+                console.error("⚠️ مكتبة Select2 لم تُحمّل.");
+            }
+        });
+    </script>
     <!-- ===============================
-    🟠 1. سكربت الترميز الذكي (نهائي)
-    ================================ -->
+                                    🟠 1. سكربت الترميز الذكي (نهائي)
+                                    ================================ -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const mainSel = document.getElementById('main-code');
@@ -498,8 +331,8 @@
     </script>
 
     <!-- ===============================
-    🟢 2. سكربت إظهار/إخفاء حقول السجل التجاري
-    ================================ -->
+                                    🟢 2. سكربت إظهار/إخفاء حقول السجل التجاري
+                                    ================================ -->
     <script>
         (function() {
             const select = document.getElementById('work_categories_id');
@@ -518,8 +351,8 @@
     </script>
 
     <!-- ===============================
-    🔵 3. سكربت قراءة ملف الإكسل قبل الحفظ
-    ================================ -->
+                                    🔵 3. سكربت قراءة ملف الإكسل قبل الحفظ
+                                    ================================ -->
     <script>
         (function() {
             const form = document.querySelector('form[action="{{ route('institucions.store') }}"]');

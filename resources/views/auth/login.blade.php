@@ -157,11 +157,50 @@
                 {{-- <a href="{{ route('password.request') }}">نسيت كلمة المرور؟</a> --}}
             </div>
 
+
+            <div class="mb-3 row align-items-center">
+                <div class="col-md-8">
+                    <div class="captcha text-center p-2">
+                        <span>{!! captcha_img() !!}</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <button type="button" onclick="refreshcaptcha()" class="btn btn-login w-100"
+                        style="background: var(--orange); border:none;">
+                        <i class="fa fa-refresh"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <input id="captcha" type="text" class="form-control @error('captcha') is-invalid @enderror"
+                    placeholder="الرجاء إدخال رمز التحقق" name="captcha">
+
+                @error('captcha')
+                    <span class="invalid-feedback d-block text-danger mt-1" role="alert">
+                        <strong>{{ $message }}</strong>
+                    </span>
+                @enderror
+            </div>
+
+
             <button type="submit" class="btn btn-login">تسجيل الدخول</button>
         </form>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+
+    <script>
+        function refreshcaptcha() {
+            fetch('{{ url('refresh-captcha') }}')
+                .then(res => res.json())
+                .then(data => {
+                    document.querySelector('.captcha span').innerHTML = data.captcha;
+                });
+        }
+    </script>
+
 </body>
 
 </html>
