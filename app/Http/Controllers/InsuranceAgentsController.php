@@ -95,63 +95,72 @@ class InsuranceAgentsController extends Controller
                 ->rawColumns(['action' ])
                 ->make(true);
         }
-public function deactivate($id)
+
+  public function deactivate(Request $request, $id)
 {
     $agent = InsuranceAgents::findOrFail($id);
 
-    $user = User::where('email', $agent->email)->first();
-
-    if ($user) {
-        $agent->users()->detach($user->id);  
-        $user->delete();                  
-        $agent->status = 0;                   
-        $agent->save();
-
-        return redirect()->back()->with('success', 'تم إلغاء التفعيل وحذف المستخدم.');
+    if ($agent->status == 0) {
+        return redirect()->back()->with('info', 'الوكيل غير مفعّل مسبقًا.');
     }
 
-    return redirect()->back()->with('info', 'الوكيل غير مفعّل.');
+    $agent->status = 0;
+    $agent->save();
+
+    $user = User::where('email', $agent->email)->first();
+    if ($user) {
+        $agent->users()->detach($user->id);
+        $user->delete();
+    }
+
+    if (method_exists($this, 'deactivateInsuranceAgent')) {
+        try {
+            $this->deactivateInsuranceAgent($agent->id);
+        } catch (\Throwable $e) {
+            \Log::error("deactivateInsuranceAgent failed for agent {$agent->id}: " . $e->getMessage());
+        }
+    }
+
+    return redirect()->back()->with('success', 'تم إلغاء تفعيل وكيل التأمين بنجاح.');
 }
 
 
 
-    // public function activate($id)
-    // {
-    //     $agent = InsuranceAgents::findOrFail($id);
+public function deactivateInsuranceAgent($id)
+{
+    $agent = InsuranceAgents::findOrFail($id);
 
-    //     if ($agent->users()->exists()) {
-    //         return redirect()->back()->with('info', 'الوكيل مفعّل مسبقًا.');
-    //     }
+    $data = [
+        'status' => 0
+    ];
 
-    //     $names = explode(' ', $agent->name, 2);
+    $url = "http://192.168.81.17:6060/admin/InsuranceAgents/{$agent->id}/Status";
 
-    //     $user = new User();
-    //     $user->first_name = $names[0];
-    //     $user->last_name = $names[1] ?? '';
-    //     $user->username = $agent->email;
-    //     $user->email = $agent->email;
-    //     $user->phonenumber = $agent->phone_number;
-    //     $user->password = Hash::make($agent->phone_number);
-    //     $user->cities_id = $agent->cities_id;
-    //     $user->user_type_id = 3;
-    //     $user->active = 1;
-    //     $user->save();
+    $response = Http::withBasicAuth('admin', 'admin')
+        ->withHeaders([
+            'accept' => 'text/plain',
+            'Content-Type' => 'application/json'
+        ])
+        ->put($url, $data);
 
-    //     $agent->users()->attach($user->id);
+    if ($response->successful()) {
+        return [
+            'success' => true,
+            'status' => $response->status(),
+            'data' => $response->body()
+        ];
+    } else {
+        return [
+            'success' => false,
+            'status' => $response->status(),
+            'error' => $response->body()
+        ];
+    }
+}
 
-    //     $role = Role::find(49);
-    //     if ($role && !$user->hasRole($role->name)) {
-    //         $user->assignRole($role->name);
-    //     }
 
-    //     $agent->status = 1;
-    //     $agent->save();
 
-    //     // استدعاء API الإرسال هنا
-    //     $this->postInsuranceAgent($agent->id);
 
-    //     return redirect()->back()->with('success', 'تم تفعيل وكيل التأمين، وإنشاء المستخدم، وإرسال البيانات إلى الـ API.');
-    // }
 
 
 
@@ -211,7 +220,7 @@ public function deactivate($id)
         $agent  = InsuranceAgents::findOrFail($id);
 
         $data = [
-            "codeId" => (string) $agent->id, // تحويل إلى نص
+            "codeId" => (string) $agent->id, 
             "name" => $agent->name,
             "email" => $agent->email,
             "phone" => $agent->phone_number,
@@ -228,7 +237,6 @@ public function deactivate($id)
             ->post('http://192.168.81.17:6060/admin/InsuranceAgents', $data);
 
         if ($response->successful()) {
-            // الطلب نجح
             return [
                 'success' => true,
                 'status' => $response->status(),
@@ -268,9 +276,6 @@ public function deactivate($id)
     public function store(Request $request)
     {
 
-        // dd($request->all());
-
-        // التحقق من صحة البيانات
         $validatedData = $request->validate([
             'name' => 'required|string|max:50',
             'phone_number' => ['required', 'string', 'digits:9', 'starts_with:92,91,94,21', 'unique:insurance_agents'],
@@ -301,7 +306,7 @@ public function deactivate($id)
             // يحفظ في public/insurancagents_files
             $file->move(public_path('insurancagents_files'), $fileName);
 
-            $agent->birth_certificate_path = $fileName; // نخزّن الاسم بس
+            $agent->birth_certificate_path = $fileName; 
         }
 
         if ($request->hasFile('qualification')) {
@@ -385,15 +390,78 @@ public function deactivate($id)
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-  public function update(Request $request, $id)
+//   public function update(Request $request, $id)
+// {
+//     // التحقق من صحة البيانات
+//     $validatedData = $request->validate([
+//         'name' => 'required|string|max:50',
+//         'phone_number' => [
+//             'required', 'string', 'digits:9',
+//             'starts_with:92,91,94,21',
+//             Rule::unique('insurance_agents')->ignore($id) // ✅ تجاهل الرقم الحالي
+//         ],
+//         'address' => 'required|string|max:150',
+//         'email' => [
+//             'required', 'email', 'max:50',
+//             Rule::unique('insurance_agents', 'email')->ignore($id)
+//         ],
+//         'cities_id' => 'required',
+//         'municipals_id' => 'required',
+//         'description' => 'required',
+//     ]);
+
+//     $agent = insuranceAgents::findOrFail($id);
+//     $agent->name = $validatedData['name'];
+//     $agent->phone_number = $validatedData['phone_number'];
+//     $agent->address = $validatedData['address'];
+//     $agent->email = $validatedData['email'];
+//     $agent->cities_id = $validatedData['cities_id'];
+//     $agent->municipals_id = $validatedData['municipals_id'];
+//     $agent->description = $validatedData['description'];
+
+//     // تحديث الملفات إذا تم رفعها
+//     if ($request->hasFile('Birth_creature')) {
+//         $file      = $request->file('Birth_creature');
+//         $ext       = $file->getClientOriginalExtension();
+//         $fileName  = 'birth_certificate_' . Str::uuid() . '.' . $ext;
+//         $file->move(public_path('insurancagents_files'), $fileName);
+//         $agent->birth_certificate_path = $fileName;
+//     }
+
+//     if ($request->hasFile('qualification')) {
+//         $file      = $request->file('qualification');
+//         $ext       = $file->getClientOriginalExtension();
+//         $fileName  = 'qualification_' . Str::uuid() . '.' . $ext;
+//         $file->move(public_path('insurancagents_files'), $fileName);
+//         $agent->qualification_path = $fileName;
+//     }
+
+//     if ($request->hasFile('image')) {
+//         $file      = $request->file('image');
+//         $ext       = $file->getClientOriginalExtension();
+//         $fileName  = 'location_image_' . Str::uuid() . '.' . $ext;
+//         $file->move(public_path('insurancagents_files'), $fileName);
+//         $agent->location_image_path = $fileName;
+//     }
+
+//     $agent->save();
+
+//     // ✅ بعد التحديث رجع لصفحة الـ index
+
+//     Alert::success('نجاح', 'تم تعديل بيانات الوكيل بنجاح!'); // ✅ السويت ألرت
+
+//     return redirect()->route('insuranceAgents.index');
+// }
+
+
+public function update(Request $request, $id)
 {
-    // التحقق من صحة البيانات
     $validatedData = $request->validate([
         'name' => 'required|string|max:50',
         'phone_number' => [
             'required', 'string', 'digits:9',
             'starts_with:92,91,94,21',
-            Rule::unique('insurance_agents')->ignore($id) // ✅ تجاهل الرقم الحالي
+            Rule::unique('insurance_agents')->ignore($id)
         ],
         'address' => 'required|string|max:150',
         'email' => [
@@ -405,48 +473,137 @@ public function deactivate($id)
         'description' => 'required',
     ]);
 
-    $agent = insuranceAgents::findOrFail($id);
-    $agent->name = $validatedData['name'];
-    $agent->phone_number = $validatedData['phone_number'];
-    $agent->address = $validatedData['address'];
-    $agent->email = $validatedData['email'];
-    $agent->cities_id = $validatedData['cities_id'];
-    $agent->municipals_id = $validatedData['municipals_id'];
-    $agent->description = $validatedData['description'];
+    $agent = InsuranceAgents::findOrFail($id);
 
-    // تحديث الملفات إذا تم رفعها
+    $agent->update([
+        'name' => $validatedData['name'],
+        'phone_number' => $validatedData['phone_number'],
+        'address' => $validatedData['address'],
+        'email' => $validatedData['email'],
+        'cities_id' => $validatedData['cities_id'],
+        'municipals_id' => $validatedData['municipals_id'],
+        'description' => $validatedData['description'],
+    ]);
+
     if ($request->hasFile('Birth_creature')) {
-        $file      = $request->file('Birth_creature');
-        $ext       = $file->getClientOriginalExtension();
-        $fileName  = 'birth_certificate_' . Str::uuid() . '.' . $ext;
+        $file = $request->file('Birth_creature');
+        $ext = $file->getClientOriginalExtension();
+        $fileName = 'birth_certificate_' . Str::uuid() . '.' . $ext;
         $file->move(public_path('insurancagents_files'), $fileName);
         $agent->birth_certificate_path = $fileName;
     }
 
     if ($request->hasFile('qualification')) {
-        $file      = $request->file('qualification');
-        $ext       = $file->getClientOriginalExtension();
-        $fileName  = 'qualification_' . Str::uuid() . '.' . $ext;
+        $file = $request->file('qualification');
+        $ext = $file->getClientOriginalExtension();
+        $fileName = 'qualification_' . Str::uuid() . '.' . $ext;
         $file->move(public_path('insurancagents_files'), $fileName);
         $agent->qualification_path = $fileName;
     }
 
     if ($request->hasFile('image')) {
-        $file      = $request->file('image');
-        $ext       = $file->getClientOriginalExtension();
-        $fileName  = 'location_image_' . Str::uuid() . '.' . $ext;
+        $file = $request->file('image');
+        $ext = $file->getClientOriginalExtension();
+        $fileName = 'location_image_' . Str::uuid() . '.' . $ext;
         $file->move(public_path('insurancagents_files'), $fileName);
         $agent->location_image_path = $fileName;
     }
 
     $agent->save();
+ 
+    try {
+        $this->updateInsuranceAgent($agent);
+    } catch (\Throwable $e) {
+        \Log::error("updateInsuranceAgent failed for agent {$agent->id}: " . $e->getMessage());
+    }
 
-    // ✅ بعد التحديث رجع لصفحة الـ index
-
-    Alert::success('نجاح', 'تم تعديل بيانات الوكيل بنجاح!'); // ✅ السويت ألرت
-
+    Alert::success('نجاح', 'تم تعديل بيانات الوكيل بنجاح!');
     return redirect()->route('insuranceAgents.index');
 }
+
+public function updateInsuranceAgent($agent)
+{
+    $url = "http://192.168.81.17:6060/admin/InsuranceAgents/{$agent->id}";
+
+    $data = [
+        'name' => $agent->name,
+        'email' => $agent->email,
+        'phone' => $agent->phone_number,
+        'address' => $agent->address,
+        'municipalityId' => 1,
+        'description' => $agent->description,
+    ];
+
+    $response = Http::withBasicAuth('admin', 'admin')
+        ->withHeaders([
+            'accept' => 'text/plain',
+            'Content-Type' => 'application/json',
+        ])
+        ->put($url, $data);
+
+    dd([
+        'status' => $response->status(),
+        'body'   => $response->body(),
+        'json'   => $response->json(),
+    ]);
+}
+
+
+
+
+public function postAddedServiceTransactionToApi(Request $request, $agentId)
+{
+    $apiBaseUrl = 'http://192.168.81.17:6060';
+    $apiUser    = 'admin';
+    $apiPass    = 'admin';
+    $endpoint   = "/admin/AddedServiceTransactions/{$agentId}/AddedServiceTransaction/Add";
+
+    $payload = [
+        'accountInsuranceNumber' => $request->accountInsuranceNumber ?? '',
+        'accountSubscriptionId'  => (int) ($request->accountSubscriptionId ?? 0),
+        'institutionId'          => (int) ($request->institutionId ?? 0),
+        'addedServiceId'         => (int) ($request->addedServiceId ?? 0),
+        'paymentType'            => (int) ($request->paymentType ?? 1),
+    ];
+
+    \Log::info('إرسال Added Service Transaction إلى الـ API', [
+        'url'     => "{$apiBaseUrl}{$endpoint}",
+        'payload' => $payload,
+    ]);
+
+    try {
+        $response = \Illuminate\Support\Facades\Http::withBasicAuth($apiUser, $apiPass)
+            ->acceptJson()
+            ->asJson()
+            ->timeout(15)
+            ->retry(2, 300)
+            ->post("{$apiBaseUrl}{$endpoint}", $payload);
+
+        $result = [
+            'success' => $response->successful(),
+            'status'  => $response->status(),
+            'body'    => $response->body(),
+            'json'    => $response->json(),
+        ];
+
+        \Log::info('✅ رد النظام المركزي (AddedServiceTransaction API):', $result);
+
+        return response()->json($result, $response->status());
+    } catch (\Throwable $th) {
+        \Log::error('🚨 خطأ أثناء إرسال Added Service Transaction: ' . $th->getMessage(), [
+            'payload' => $payload
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'status'  => 0,
+            'error'   => $th->getMessage(),
+        ], 500);
+    }
+}
+
+
+
 
 
     /**

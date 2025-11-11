@@ -11,9 +11,9 @@ class Subscription extends Model
 
     protected $table= 'subscription33';
 
-    protected $fillable = ['name', 'beneficiaries_categories_id', 'status'];
+    protected $fillable = ['name', 'beneficiaries_categories_id', 'status','payment_due_type_id'];
 
-      public function values()
+ public function values()
     {
         return $this->hasMany(subscription_values::class, 'subscription_id');
     }
@@ -21,5 +21,10 @@ class Subscription extends Model
         {
             return $this->belongsTo(\App\Models\beneficiariesCategories::class, 'beneficiaries_categories_id');
         }
+
+  public function paymentDueType()
+    {
+        return $this->belongsTo(PaymentDueType::class, 'payment_due_type_id');
+    }
 
 }

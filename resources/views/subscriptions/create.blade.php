@@ -125,6 +125,26 @@
                             </select>
                         </div>
 
+                        {{-- نوع الدفع --}}
+                        <div class="form-group mt-4">
+                            <label style="display:block;margin-bottom:6px;color:#6b7280;font-size:.95rem;font-weight:700;">
+                                نوع الدفع
+                            </label>
+                            <select name="payment_due_type_id" class="form-control"
+                                style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;
+               border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;"
+                                required>
+                                <option value="">اختر نوع الدفع</option>
+                                @foreach ($paymentDueTypes as $paymentType)
+                                    <option value="{{ $paymentType->id }}"
+                                        {{ old('payment_due_type_id') == $paymentType->id ? 'selected' : '' }}>
+                                        {{ $paymentType->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+
                         <hr style="border-color:#E5E7EB;">
 
                         {{-- أنواع الاشتراك --}}
@@ -164,6 +184,7 @@
                                     value="{{ old("types.$type->id.duration") }}" class="form-control only-positive"
                                     style="width:100%;border:1px solid #d7dbe0;background:#fdfdfd;border-radius:999px;padding:12px 14px;font-size:1rem;outline:none;">
                             </div>
+
 
                             {{-- reset قيمة الحقل عند تغيير نوع القيمة --}}
                             <script>

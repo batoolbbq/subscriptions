@@ -14,15 +14,12 @@ class beneficiariesCategoriesController extends Controller
 {
 
 
-    // قائمة الفئات
     public function index()
     {
-        // بصفحات بسيطة؛ عدّل الرقم حسب حاجتك
         $items = beneficiariesCategories::orderByDesc('id')->paginate(15);
         return view('beneficiariescategory.index', compact('items'));
     }
 
-    // شاشة الإضافة
     public function create()
     {
         return view('beneficiariescategory.create');
@@ -83,11 +80,10 @@ public function store(Request $request)
         'status.required' => 'الحالة مطلوبة.',
     ]);
 
-    // تخزين محلي
     $category = beneficiariesCategories::create($data);
 
-    // إرسال للـ API الخارجي
-    Http::post('http://192.168.81.8/api/categories', $data);
+    $this->postWorkCategoryToApi($category->id, $category->name, $category->status);
+
 
     Alert::success('تمت العملية', 'تم إضافة الفئة بنجاح.');
 
@@ -96,101 +92,51 @@ public function store(Request $request)
 
 
 
-    //   public function postWorkCategoryToApi($id, $name, $status)
-    // {
-    //     $payload = [
-    //         'id'     => $id,
-    //         'name'   => $name,
-    //         'status' => (int) $status,
-    //     ];
+   
+    public function postWorkCategoryToApi($id, $name, $status)
+    {
+        $payload = [
+            'id'     => (int) $id,
+            'name'   => $name,
+            'status' => (int) $status,
+        ];
 
-    //     $response = Http::withHeaders([
-    //         'accept' => 'application/json',
-    //         'Authorization' => 'Basic ' . base64_encode('admin:admin'),
-    //         'Content-Type' => 'application/json',
-    //     ])->post('http://192.168.81.17:6060/admin/WorkCategorys', $payload);
+        $response = Http::withBasicAuth('admin', 'admin')
+            ->acceptJson()
+            ->post('http://192.168.81.17:6060/admin/WorkCategorys', $payload);
 
-    //     if ($response->successful()) {
-    //         return $response->json();
-    //     }
-
-    //     return [
-    //         'success' => false,
-    //         'status'  => $response->status(),
-    //         'error'   => $response->body(),
-    //         'sent'    => $payload, // نطبع البيانات المرسلة للديباغ
-    //     ];
-    // }
+        if ($response->successful()) {
+            \Log::info("✅ WorkCategory #{$id} sent successfully to external API.");
+            return ['success' => true, 'status' => $response->status(), 'data' => $response->json()];
+        }
 
 
+        \Log::warning("⚠️ WorkCategory #{$id} send failed, status: " . $response->status());
+        return [
+            'success' => false,
+            'status'  => $response->status(),
+            'error'   => $response->body(),
+            'sent'    => $payload,
+        ];
+
+    }
 
 
 
 
 
-    //    public function store(Request $request)
-    // {
-    //     $data = $request->validate([
-    //         'name'   => ['required','string','max:255'],
-    //         'code'   => ['required','string','regex:/^\d{1,5}$/', 'max:5',
-    //                      'unique:beneficiaries_categories,code'],
-    //         'status' => ['required', Rule::in([0,1])],
-    //     ], [
-    //         'code.regex' => 'الكود يجب أن يكون أرقامًا فقط حتى 5 خانات.',
-    //     ]);
-
-
-    //     $benef = beneficiariesCategories::create($data);
-    //   return  $result = $this->postWorkCategoryToApi(
-    //     $benef->id,        // id من قاعدة البيانات
-    //     $benef->name,      // الاسم
-    //     $benef->status     // الحالة
-    // );
-
-
-    //     return redirect()
-    //         ->route('beneficiariescategory.index')
-    //         ->with('success', 'تم إضافة الفئة بنجاح.');
-    // }
-    //  public function postWorkCategoryToApi($name, $status = 0)
-    // {
-    //     $response = Http::withHeaders([
-    //         'accept' => 'application/json',
-    //         'Authorization' => 'Basic ' . base64_encode('admin:admin'),
-    //         'Content-Type' => 'application/json',
-    //     ])->post('http://192.168.81.17:6060/admin/WorkCategorys', [
-            
-    //         'name' => $name,
-    //         'status' => $status,
-    //     ]);
-
-    //     if ($response->successful()) {
-    //         return $response->json(); // أو true إذا ما تحتاج البيانات
-    //     }
-
-    //     // لعرض الخطأ إذا فشل الطلب
-    //     return [
-    //         'success' => false,
-    //         'status' => $response->status(),
-    //         'error' => $response->body(),
-    //     ];
-    // }
-
-    // عرض سجل واحد (اختياري)
-    public function show($id)
+      public function show($id)
     {
         $item = beneficiariesCategories::findOrFail($id);
         return view('beneficiariescategory.show', compact('item'));
     }
 
-    // شاشة التعديل
     public function edit($id)
     {
         $item = beneficiariesCategories::findOrFail($id);
         return view('beneficiariescategory.edit', compact('item'));
     }
 
-    // تحديث السجل
     public function update(Request $request, $id)
     {
         $item = beneficiariesCategories::findOrFail($id);
@@ -207,13 +153,55 @@ public function store(Request $request)
         ]);
 
         $item->update($data);
+     try {
+        $this->updateWorkCategoryToApi($item->id, $item->name, $item->status);
+    } catch (\Throwable $e) {
+        \Log::error("❌ WorkCategory update to API failed for ID {$item->id}: " . $e->getMessage());
+    }
 
         return redirect()
             ->route('beneficiariescategory.index')
             ->with('success', 'تم تحديث الفئة بنجاح.');
     }
 
-    // حذف السجل
+
+public function updateWorkCategoryToApi($id, $name, $status)
+{
+    $payload = [
+        'id'     => $id,
+        'name'   => $name,
+        'status' => (int) $status,
+    ];
+
+    $url = "http://192.168.81.17:6060/admin/WorkCategorys/{$id}";
+
+    $response = Http::withBasicAuth('admin', 'admin')
+        ->withHeaders([
+            'accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ])
+        ->put($url, $payload);
+
+    if ($response->successful()) {
+        \Log::info("✅ WorkCategory #{$id} updated successfully in external API.");
+        return [
+            'success' => true,
+            'status' => $response->status(),
+            'data' => $response->json(),
+        ];
+    }
+
+    \Log::warning("⚠️ WorkCategory #{$id} update failed in API. Status: {$response->status()}");
+    return [
+        'success' => false,
+        'status' => $response->status(),
+        'error' => $response->body(),
+        'sent' => $payload,
+    ];
+}
+
+
+
     public function destroy($id)
     {
         $item = beneficiariesCategories::findOrFail($id);

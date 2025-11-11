@@ -37,8 +37,10 @@ class SubscriptionController extends Controller
     {
         $workCategories = \App\Models\beneficiariesCategories::where('status', 1)->get();
             $types = subscription_type::all();
+            $paymentDueTypes = \App\Models\PaymentDueType::all(); 
+
     
-        return view('subscriptions.create', compact('workCategories','types'));
+        return view('subscriptions.create', compact('workCategories','types','paymentDueTypes'));
     }
 
     public function getData()
@@ -71,10 +73,10 @@ class SubscriptionController extends Controller
     public function store(Request $request)
     {
 
-        // dd($request->all());
         $request->validate([
             'name' => 'required|string|max:255',
             'types' => 'required|array',
+           'payment_due_type_id' => 'required|exists:payment_due_types,id', // 👈 تحقق جديد
             'types.*.value' => 'nullable|numeric|min:0',
             'types.*.is_percentage' => 'nullable|in:0,1',
             'types.*.duration' => 'nullable|integer|min:0',
@@ -82,7 +84,6 @@ class SubscriptionController extends Controller
 
         $types = $request->input('types');
 
-        // فلترة الأنواع المكتملة فقط
         $validTypes = collect($types)->filter(function ($item) {
             return isset($item['value'], $item['is_percentage'], $item['duration']) &&
                 $item['value'] !== '' && $item['is_percentage'] !== '' && $item['duration'] !== '';
@@ -101,7 +102,6 @@ class SubscriptionController extends Controller
             return back()->withInput()->withErrors('يجب إدخال نوع اشتراك مكتمل واحد على الأقل.');
         }
 
-        // التحقق من حدود النسبة المئوية
         foreach ($validTypes as $typeId => $data) {
             if ($data['is_percentage'] == '1' && ($data['value'] < 0 || $data['value'] > 100)) {
                 return back()->withInput()->withErrors("قيمة النسبة في نوع الاشتراك رقم $typeId يجب أن تكون بين 0 و 100.");
@@ -115,12 +115,14 @@ class SubscriptionController extends Controller
                 'name' => $request->name,
                 'beneficiaries_categories_id' =>$request->beneficiaries_categories_id,
                 'status' => true,
+                 'payment_due_type_id' => $request->payment_due_type_id, 
+
             ]);
 
             foreach ($validTypes as $typeId => $data) {
                 subscription_values::create([
                     'subscription_id' => $subscription->id,
-                    'subscription_type' => $typeId, // الآن نربطه بـ KValue.id
+                    'subscription_type' => $typeId, 
                     'value' => $data['value'],
                     'is_percentage' => $data['is_percentage'],
                     'duration' => $data['duration'],
@@ -129,11 +131,10 @@ class SubscriptionController extends Controller
             }
             DB::commit();
 
-          return  $result = $this->sendSubscriptionToApi($subscription, $validTypes);
+            $result = $this->sendSubscriptionToApi($subscription, $validTypes);
 
             if (!$result['success']) {
-                // خيار 1: تكتفي بالتسجيل وتكمل عادي
-                // خيار 2: تعرض تنبيه للمستخدم بدون إلغاء الحفظ المحلي:
+              
                 return redirect()
                     ->route('subscriptions.index')
                     ->with('warning', 'تم الحفظ محليًا لكن فشل إرسال البيانات للـ API الخارجي.');
@@ -152,7 +153,7 @@ class SubscriptionController extends Controller
 
 
 
-    public function sendSubscriptionToApi($subscription, $validTypes)
+   public function sendSubscriptionToApi($subscription, $validTypes)
     {
         $apiBaseUrl  = 'http://192.168.81.17:6060';
         $apiEndpoint = '/admin/Subscriptions';
@@ -160,29 +161,21 @@ class SubscriptionController extends Controller
         $apiPass     = 'admin';
 
         $payload = [
-            'id'             => 1,
+            'id'             => $subscription->id, //  مثل الـ curl الرسمي
             'name'           => $subscription->name,
-            'workCategoryId' => 1,
+            'workCategoryId' => $subscription->beneficiaries_categories_id, // أو رقم حقيقي لو متاح عندك
             'subscriptionValues' => collect($validTypes)->map(function ($data, $typeId) {
-                $subscriptionTypeId = is_numeric($typeId) && (int)$typeId > 0
-                    ? (int)$typeId
-                    : (int)($data['subscription_type'] ?? $data['subscription_type_id'] ?? 0);
-
-                $isPercentage = isset($data['is_percentage'])
-                    ? ((int)$data['is_percentage'] === 1)
-                    : (bool)($data['isPercentage'] ?? false);
+                $subscriptionTypeId = is_numeric($typeId) ? (int)$typeId : 0;
 
                 return [
                     'subscriptionType' => $subscriptionTypeId,
                     'value'        => isset($data['value']) ? (float)$data['value'] : 0.0,
-                    'isPercentage' => $isPercentage,
-                    'duration'     => isset($data['duration']) ? (int)$data['duration'] : 0,
-                    'status'       => (int)($data['status'] ?? 1),
+                    'isPercentage' => ((int)($data['is_percentage'] ?? 0) === 1),
+                    'duration'     => (int)($data['duration'] ?? 0),
+                    'paymentDue'   => 1, //  أضفناه كما في الـ curl
+                    'status'       => 0, //  مثل الـ curl الرسمي
                 ];
-            })
-            ->filter(fn ($row) => $row['subscriptionType'] > 0) 
-            ->values()
-            ->all(),
+            })->values()->all(),
         ];
 
         try {
@@ -194,40 +187,37 @@ class SubscriptionController extends Controller
                 ->post(rtrim($apiBaseUrl, '/') . '/' . ltrim($apiEndpoint, '/'), $payload);
 
             if ($response->successful()) {
-                Log::info('Subscriptions API success', [
+                Log::info('✅ Subscription sent successfully', [
                     'status' => $response->status(),
-                    'api_response' => $response->json(),
-                ]);
-
-                return [
-                    'success'  => true,
-                    'message'  => 'تم إرسال الاشتراك إلى الـ API بنجاح.',
                     'response' => $response->json(),
-                    'payload'  => $payload, 
+                ]);
+                return [
+                    'success' => true,
+                    'message' => 'تم إرسال الاشتراك إلى الـ API بنجاح.',
+                    'response' => $response->json(),
+                    'payload' => $payload,
                 ];
             }
 
-            Log::error('Subscriptions API error', [
-                'status'  => $response->status(),
-                'error'   => $response->body(),
+            Log::error('❌ Subscription API error', [
+                'status' => $response->status(),
+                'error' => $response->body(),
                 'payload' => $payload,
             ]);
-
             return [
                 'success' => false,
                 'message' => 'فشل إرسال الاشتراك إلى الـ API.',
-                'status'  => $response->status(),
-                'error'   => $response->body(),
+                'status' => $response->status(),
+                'error' => $response->body(),
                 'payload' => $payload,
             ];
         } catch (\Throwable $th) {
-            Log::error('Subscriptions API exception: ' . $th->getMessage(), ['payload' => $payload]);
-
+            Log::error('⚠️ Subscription API exception: ' . $th->getMessage(), ['payload' => $payload]);
             return [
                 'success' => false,
-                'message' => 'استثناء أثناء الاتصال بالـ API.',
-                'status'  => 0,
-                'error'   => $th->getMessage(),
+                'message' => 'حدث استثناء أثناء الاتصال بالـ API.',
+                'status' => 0,
+                'error' => $th->getMessage(),
                 'payload' => $payload,
             ];
         }
@@ -245,74 +235,143 @@ class SubscriptionController extends Controller
 
         return view('subscriptions.edit', compact('subscription', 'types', 'beneficiariesCategories'));
     }
+public function update(Request $request, $id)
+{
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'beneficiaries_categories_id' => 'required|exists:beneficiaries_categories,id',
+        'types' => 'required|array',
+        'types.*.value' => 'nullable|numeric|min:0',
+        'types.*.is_percentage' => 'nullable|in:0,1',
+        'types.*.duration' => 'nullable|integer|min:0',
+    ]);
 
-        public function update(Request $request, $id)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'beneficiaries_categories_id' => 'required|exists:beneficiaries_categories,id',
-            'types' => 'required|array',
-            'types.*.value' => 'nullable|numeric|min:0',
-            'types.*.is_percentage' => 'nullable|in:0,1',
-            'types.*.duration' => 'nullable|integer|min:0',
+    $types = $request->input('types');
+
+    $validTypes = collect($types)->filter(function ($item) {
+        return isset($item['value'], $item['is_percentage'], $item['duration']) &&
+            $item['value'] !== '' && $item['is_percentage'] !== '' && $item['duration'] !== '';
+    });
+
+    if ($validTypes->isEmpty()) {
+        return back()->withInput()->withErrors('يجب إدخال نوع اشتراك مكتمل واحد على الأقل.');
+    }
+
+    DB::beginTransaction();
+
+    try {
+        // 🟠 تحديث البيانات المحلية
+        $subscription = Subscription::findOrFail($id);
+        $subscription->update([
+            'name' => $request->name,
+            'beneficiaries_categories_id' => $request->beneficiaries_categories_id,
+            'status' => true,
         ]);
 
-        $types = $request->input('types');
-
-        $validTypes = collect($types)->filter(function ($item) {
-            return isset($item['value'], $item['is_percentage'], $item['duration']) &&
-                $item['value'] !== '' && $item['is_percentage'] !== '' && $item['duration'] !== '';
-        });
-
-        $incompleteTypes = collect($types)->filter(function ($item) {
-            $filledCount = collect($item)->filter(fn($v) => $v !== null && $v !== '')->count();
-            return $filledCount > 0 && $filledCount < 3;
-        });
-
-        if ($incompleteTypes->isNotEmpty()) {
-            return back()->withInput()->withErrors('يرجى تعبئة كل الحقول (القيمة، النوع، المدة) لأي نوع اشتراك تم استخدامه.');
-        }
-
-        if ($validTypes->isEmpty()) {
-            return back()->withInput()->withErrors('يجب إدخال نوع اشتراك مكتمل واحد على الأقل.');
-        }
+        subscription_values::where('subscription_id', $subscription->id)->delete();
 
         foreach ($validTypes as $typeId => $data) {
-            if ($data['is_percentage'] == '1' && ($data['value'] < 0 || $data['value'] > 100)) {
-                return back()->withInput()->withErrors("قيمة النسبة في نوع الاشتراك رقم $typeId يجب أن تكون بين 0 و 100.");
-            }
-        }
-
-        DB::beginTransaction();
-        try {
-            $subscription = Subscription::findOrFail($id);
-            $subscription->update([
-                'name' => $request->name,
-                'beneficiaries_categories_id' => $request->beneficiaries_categories_id,
-                'status' => true,
+            subscription_values::create([
+                'subscription_id' => $subscription->id,
+                'subscription_type' => $typeId,
+                'value' => $data['value'],
+                'is_percentage' => $data['is_percentage'],
+                'duration' => $data['duration'],
+                'status' => 1,
             ]);
-
-            subscription_values::where('subscription_id', $subscription->id)->delete();
-
-            foreach ($validTypes as $typeId => $data) {
-                subscription_values::create([
-                    'subscription_id' => $subscription->id,
-                    'subscription_type' => $typeId,
-                    'value' => $data['value'],
-                    'is_percentage' => $data['is_percentage'],
-                    'duration' => $data['duration'],
-                    'status' => 1,
-                ]);
-            }
-
-            DB::commit();
-            return redirect()->route('subscriptions.index')->with('success', 'تم تعديل الاشتراك بنجاح');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withInput()->withErrors('حدث خطأ أثناء التحديث: ' . $e->getMessage());
         }
+
+        DB::commit();
+
+        // 🧩 نتحقق أن الدالة فعلاً تُستدعى
+        Log::info('📡 وصلنا إلى updateSubscriptionInApi', ['subscription_id' => $subscription->id]);
+
+        $result = $this->updateSubscriptionInApi($subscription, $validTypes);
+
+        // 🧠 فحص النتيجة بالتفصيل
+        Log::info('📬 نتيجة الاتصال بـ API', ['result' => $result]);
+
+        if (!$result['success']) {
+            return redirect()->route('subscriptions.index')
+                ->with('warning', 'تم التعديل محليًا لكن فشل تحديث البيانات في الـ API الخارجي.');
+        }
+
+        return redirect()->route('subscriptions.index')->with('success', 'تم تعديل الاشتراك بنجاح.');
+
+    } catch (\Throwable $e) {
+        DB::rollBack();
+        Log::error('🔥 خطأ أثناء عملية التحديث', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return back()->withInput()->withErrors('حدث خطأ أثناء التحديث: ' . $e->getMessage());
     }
+}
+
+
+
+public function updateSubscriptionInApi($subscription, $validTypes)
+{
+    $apiBaseUrl  = 'http://192.168.81.17:6060';
+    $apiUser     = 'admin';
+    $apiPass     = 'admin';
+
+    $payload = [
+        'id'             => $subscription->id,
+        'name'           => $subscription->name,
+        'workCategoryId' => (int)$subscription->beneficiaries_categories_id,
+        'subscriptionValues' => collect($validTypes)->map(function ($data, $typeId) {
+            return [
+                'subscriptionType' => (int)$typeId,
+                'value'            => (float)($data['value'] ?? 0),
+                'isPercentage'     => ((int)($data['is_percentage'] ?? 0) === 1),
+                'duration'         => (int)($data['duration'] ?? 0),
+                'paymentDue'       => 0,
+                'status'           => 0,
+            ];
+        })->values()->all(),
+    ];
+
+    $url = "{$apiBaseUrl}/admin/Subscriptions/UpdateInfo/{$subscription->id}";
+
+    try {
+        Log::info('🚀 محاولة تحديث الاشتراك في الـ API', ['url' => $url, 'payload' => $payload]);
+
+        $response = Http::withBasicAuth($apiUser, $apiPass)
+            ->acceptJson()
+            ->asJson()
+            ->timeout(15)
+            ->put($url, $payload);
+
+        $data = [
+            'status' => $response->status(),
+            'body'   => $response->body(),
+            'json'   => $response->json(),
+            'payload' => $payload,
+        ];
+
+        Log::info('📨 رد الـ API', $data);
+
+        return [
+            'success' => $response->successful(),
+            'status'  => $response->status(),
+            'response' => $response->json(),
+        ];
+
+    } catch (\Throwable $th) {
+        Log::error('⚠️ خطأ أثناء الاتصال بالـ API', ['message' => $th->getMessage()]);
+        return [
+            'success' => false,
+            'error'   => $th->getMessage(),
+        ];
+    }
+}
+
+
+
+
+
+
 
 
         public function destroy($id)

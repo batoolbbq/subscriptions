@@ -30,11 +30,20 @@ use Illuminate\Support\Facades\Validator;
 |
 */
 
+// Route::post('/customers/{id}/updateRenewal', [CustomerController::class, 'updateRenewal'])->name('customers.renewal.update');
 
 
 // Route::get('/cities/send-to-api', [CityController::class, 'sendCitiesToApi'])
 //     ->name('cities.sendToApi');
 
+     Route::get('/renew', [CustomerController::class, 'renewPage'])->name('renew.page');
+    Route::post('/renew/search', [CustomerController::class, 'renewSearch'])->name('renew.search');
+    Route::post('/renew/verify', [CustomerController::class, 'renewVerify'])->name('renew.verify');
+    Route::get('/customers/{id}/renew-edit', [App\Http\Controllers\CustomerController::class, 'renewEdit'])
+    ->name('customer.renewEdit');
+
+    Route::put('/customers/{id}/updateRenew', [App\Http\Controllers\CustomerController::class, 'updateRenew'])
+    ->name('customer.updateRenew');
 
 
     Auth::routes();
@@ -65,6 +74,12 @@ use Illuminate\Support\Facades\Validator;
     Route::get('/customers/lookup', [CustomerController::class, 'showLookupForm'])->name('customers.lookup');
     Route::post('/customers/lookup-do', [CustomerController::class, 'doLookup'])->name('customers.get');
     Route::get('/customers/{customer}/print-card', [CustomerController::class, 'printCard'])->name('customers.print.card');
+
+    Route::get('/renew', [CustomerController::class, 'renewPage'])->name('renew.page');
+    Route::post('/renew/search', [CustomerController::class, 'renewSearch'])->name('renew.search');
+    Route::post('/renew/verify', [CustomerController::class, 'renewVerify'])->name('renew.verify');
+
+
 
 
     Route::get('/customers/search', [CustomerController::class, 'searchForm'])
@@ -132,7 +147,7 @@ Route::post('institucions/{institucion}/transfer', [\App\Http\Controllers\Instit
     })->name('banks.branches');
 
     // Route::post('/customers/register/step3', [App\Http\Controllers\CustomerController::class, 'test44'])->name('customers.register.step3');
-    Route::post('/customers/register/step3', [CustomerController::class, 'register'])->name('customers.register.step3');
+    Route::post('/customers/register/step3', [CustomerController::class, 'test44'])->name('customers.register.step3');
 
     Route::post('/CheckCustomer', [App\Http\Controllers\CustomerController::class, 'test'])->name('check-customer');
     // Route::post('/StoreCustomer', [App\Http\Controllers\CustomerController::class, 'saveCustomersByAdmin'])->name('store-customer');
@@ -156,6 +171,9 @@ Route::get('/insurance-agents/create', [InsuranceAgentsController::class, 'creat
     Route::post('cards/store/{id}', [App\Http\Controllers\CardController::class, 'store'])->name('cards/store');
     Route::post('cards/printed/{id}', [App\Http\Controllers\CardController::class, 'printed'])->name('cards/printed');
     Route::post('cards/allowPrint/{id}', [App\Http\Controllers\CardController::class, 'allowPrint'])->name('print_allowed');
+    Route::get('/cards/card/{regnumber}', [App\Http\Controllers\CardController::class, 'showByRegnumber'])
+    ->name('cards.card');
+ 
     // Route::post('cards/storesv/{id}', [App\Http\Controllers\Dashbord\CardController::class, 'storephotosave'])->name('cards/storesv');
 
 

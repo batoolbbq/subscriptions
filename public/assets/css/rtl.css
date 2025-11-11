@@ -2229,7 +2229,7 @@ pre code {
     display: block;
     width: 100%;
     padding: .375rem .75rem;
-    font-size: 1rem;
+    font-size: 5rem;
     line-height: 1.5;
     color: #495057;
     background-color: #fff;
@@ -3966,6 +3966,12 @@ tbody.collapse.show {
     border: 1px solid #ced4da;
     border-radius: .25rem;
 }
+   .wrap {
+            width: 100%;
+            max-width: 1200px;
+            margin-inline: auto
+        }
+
 
 .input-group-text input[type=checkbox],
 .input-group-text input[type=radio] {

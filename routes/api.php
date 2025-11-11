@@ -3,7 +3,11 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\InsuranceAgentsController;
+
 use App\Http\Controllers\CardController;
+use App\Http\Controllers\Api\AuthController;
+
 
 
 /*
@@ -28,12 +32,7 @@ Route::get('/customers', [CardController::class, 'indexApi']);
 
 
 Route::get('/customers/active', [CustomerController::class, 'getpendingCustomers']);
-// Route::get('/customers/inactive', [CustomerController::class, 'getInactiveCustomers']);
 
-
-
-
-// كستمر واحد بالـ uuid + active condition
 Route::get('/customers/{uuid}/active', [CustomerController::class, 'getpendingCustomerByUuid']);
 Route::get('/customers/{uuid}/inactive', [CustomerController::class, 'getInactiveCustomerByUuid']);
 
@@ -48,8 +47,15 @@ Route::post('/customers/bulk-activate-payment', [CustomerController::class, 'bul
 
 Route::post('/customers/{uuid}/activate-payment', [CustomerController::class, 'activateAndPayment']);
 
+Route::post('/main-subscriber/send/{agentId?}', [CustomerController::class, 'postMainSubscriberToApi'])
+    ->name('api.main-subscriber.send');
 
 
+Route::post('/beneficiaries/send', [CustomerController::class, 'postBeneficiariesToApi'])
+    ->name('api.beneficiaries.send');
+
+Route::post('/added-service/send/{agentId?}', [InsuranceAgentsController::class, 'postAddedServiceTransactionToApi'])
+    ->name('added-service.send');
 
 
 Route::post('/send-sms', [CustomerController::class, 'sendSms']);

@@ -189,6 +189,59 @@
             padding: 10px;
             margin-bottom: 16px
         }
+
+        .card-head {
+            background: linear-gradient(135deg, #d95b00 0%, #F58220 35%, #FF8F34 70%, #ffb066 100%);
+            padding: 12px 16px;
+            color: #fff;
+            font-weight: 800;
+            display: flex;
+            justify-content: space-between;
+            /* يخلي الاسم والزر بعيدين */
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .card-head .toggle-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: #fff;
+            font-size: 1.1rem;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background .3s;
+        }
+
+        .card-head .toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .card-body {
+            display: none;
+            /* مغلق افتراضيًا */
+        }
+
+        .card.open .card-body {
+            display: block;
+            animation: fadeIn .3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 
@@ -209,16 +262,17 @@
                 </div>
             @endif
 
-            @php($main = session('cra_main'))
-            @php($deps = collect(session('cra_dependents', []))->values())
+
+
 
             <form action="{{ route('customers.register.step3') }}" method="POST">
                 @csrf
                 @method('POST')
 
                 {{-- بطاقة المشترك الرئيسي --}}
-                <div class="card">
-                    <div class="card-head">
+                <div class="card open" id="main-card">
+
+                    <div class="card-head" dir="ltr">
                         <span class="icon"><i class="fa-solid fa-user-shield"></i></span>
                         بيانات المشترك الرئيسي
                     </div>
@@ -333,20 +387,6 @@
                             </div>
                         </div>
 
-
-                        @if (session('subscriber_type') === 'single')
-                            <div class="row g-3 mt-1">
-                                <div class="col-md-6 form-group">
-                                    <label>الجنس</label>
-                                    <select name="main[gender]" class="form-control" required>
-                                        <option value="">اختر الجنس</option>
-                                        <option value="ذكر" @selected(old('main.gender') == 'ذكر')>ذكر</option>
-                                        <option value="أنثى" @selected(old('main.gender') == 'أنثى')>أنثى</option>
-                                    </select>
-                                </div>
-                            </div>
-                        @endif
-
                         <!-- المصرف وفرع المصرف جنب بعض -->
 
                         @if (!in_array(session('beneficiariesSupCategories'), [1, 12]))
@@ -389,18 +429,14 @@
                                             value="{{ session('insured_no') }}" readonly>
                                     </div>
                                     <div class="col-md-6 form-group">
-                                        <label>رقم المعاش</label>
-                                        <input type="text" class="form-control" name="main[pension_no]"
-                                            value="{{ session('pension_no') }}" readonly>
-                                    </div>
-                                </div>
-
-                                <div class="row g-3 mt-1">
-                                    <div class="col-md-6 form-group">
                                         <label>رقم الحساب</label>
                                         <input type="text" class="form-control" name="main[account_no]"
                                             value="{{ session('account_no') }}" readonly>
                                     </div>
+                                </div>
+
+                                <div class="row g-3 mt-1">
+
                                     <div class="col-md-6 form-group">
                                         <label>إجمالي المرتب</label>
                                         <input type="text" class="form-control" name="main[total_pension]"
@@ -415,16 +451,13 @@
                                         <input type="text" class="form-control" name="main[insured_no]">
                                     </div>
                                     <div class="col-md-6 form-group">
-                                        <label>رقم المعاش</label>
-                                        <input type="text" class="form-control" name="main[pension_no]">
+                                        <label>رقم الحساب</label>
+                                        <input type="text" class="form-control" name="main[account_no]">
                                     </div>
                                 </div>
 
                                 <div class="row g-3 mt-1">
-                                    <div class="col-md-6 form-group">
-                                        <label>رقم الحساب</label>
-                                        <input type="text" class="form-control" name="main[account_no]">
-                                    </div>
+
                                     <div class="col-md-6 form-group">
                                         <label>إجمالي المرتب</label>
                                         <input type="text" class="form-control" name="main[total_pension]">
@@ -459,19 +492,27 @@
                 </div>
 
 
-
-                {{-- بطاقات المشتركين الفرعيين --}}
                 @if ($deps->count())
                     @foreach ($deps as $i => $d)
-                        <div class="card">
-                            <div class="card-head">
-                                <span class="icon"><i class="fa-solid fa-user"></i></span>
-                                منتفع
-                                (@if ($d['relationship'] == 2)
-                                    زوجة
-                                @elseif($d['relationship'] == 3)
-                                    ابن / ابنة
-                                @endif)
+                        <div class="card" id="dep-card-{{ $i }}">
+                            <div class="card-head" onclick="toggleDep({{ $i }})">
+                                <div>
+
+                                    <span class="fw-bold text-white-75">المنتفع:</span>
+
+                                    <span class="fw-bold text-white">{{ $d['name'] ?? '—' }}</span>
+
+                                    <small class="text-light fst-italic">
+                                        @if ($d['relationship'] == 2)
+                                            (زوجة)
+                                        @elseif($d['relationship'] == 3)
+                                            (ابن / ابنة)
+                                        @endif
+                                    </small>
+                                </div>
+                                <button type="button" class="toggle-btn" id="btn-{{ $i }}">
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
                             </div>
                             <div class="card-body">
 
@@ -612,6 +653,22 @@
         </div>
     </div>
 </body>
+<script>
+    function toggleDep(index) {
+        const card = document.getElementById(`dep-card-${index}`);
+        const btn = document.getElementById(`btn-${index}`);
+        const icon = btn.querySelector('i');
+
+        card.classList.toggle('open'); // يفتح أو يغلق الكارد
+
+        // يبدل الأيقونة
+        if (card.classList.contains('open')) {
+            icon.classList.replace('fa-plus', 'fa-minus');
+        } else {
+            icon.classList.replace('fa-minus', 'fa-plus');
+        }
+    }
+</script>
 
 <script src="{{ URL::asset('assets/js/jquery-3.3.1.min.js') }}"></script>
 <script>

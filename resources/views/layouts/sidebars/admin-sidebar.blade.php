@@ -129,12 +129,24 @@
                                 class="right-nav-text">{{ __('بدل فاقد ') }}</span></a>
                     </li>
 
+                         {{-- <li>
+                        <a href="{{ route('customers.renewal') }}"><i class="fas fa-exchange-alt"></i><span
+                                class="right-nav-text">{{ __('تجديد بطاقة ') }}</span></a>
+                    </li> --}}
+
 
 
                     <li>
                         <a href="{{ route('cards/index') }}">
                             <i class="fas fa-id-card"></i>
                             <span class="right-nav-text">{{ __('تصوير مشترك / منتفع') }}</span>
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a href="{{ route('renew.page') }}">
+                            <i class="fas fa-id-card"></i>
+                            <span class="right-nav-text">{{ __(' تجديد بطاقة ') }}</span>
                         </a>
                     </li>
 

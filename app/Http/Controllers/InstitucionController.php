@@ -14,6 +14,10 @@ use App\Models\AddedServiceService;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\InstitucionSheetImport;
 use RealRashid\SweetAlert\Facades\Alert;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+
+
 use Normalizer;  
 
 
@@ -424,6 +428,8 @@ public function store(Request $request)
                 ]);
             } catch (\Throwable $e) {
                 \DB::rollBack();
+                dd('🚀 وصلنا لنهاية store بنجاح', $validated);
+
                 return redirect()->route('institucions.show', $model)
                     ->with('warning', 'تم إنشاء جهة العمل، لكن حدث خطأ أثناء استيراد ملف الإكسل: '.$e->getMessage());
             }
@@ -431,8 +437,16 @@ public function store(Request $request)
 
         \DB::commit();
 
-        return redirect()
-            ->route('institucions.show', $model)
+        $result = $this->postInstitutionToApi($model);
+
+
+
+        if (!$result['success']) {
+            return redirect()->route('institucions.show', $model)
+                ->with('warning', 'تم الحفظ محليًا لكن فشل الإرسال للنظام المركزي.');
+        }
+
+        return redirect()->route('institucions.show', $model)
             ->with('success_swal', 'تمت إضافة جهة العمل بنجاح ✅');
 
     } catch (\Throwable $e) {
@@ -442,6 +456,73 @@ public function store(Request $request)
             ->withInput();
     }
 }
+
+public function postInstitutionToApi($institution)
+{
+    $apiBaseUrl = 'http://192.168.81.17:6060';
+    $apiUser    = 'admin';
+    $apiPass    = 'admin';
+    $endpoint   = '/admin/Institutions';
+
+     $payload = [
+        'id'             => $institution->id,
+        'name'           => $institution->name,
+        'description'    => $institution->code ?? '',
+        'subscriptionId' => $institution->subscriptions_id,
+        'workCategoryId' => optional($institution->subscription)->beneficiaries_categories_id,
+    ];
+
+    \Log::info('🚀 محاولة إرسال جهة العمل إلى الـ API الخارجي', [
+        'url' => "{$apiBaseUrl}{$endpoint}",
+        'payload' => $payload
+    ]);
+
+    try {
+        $response = \Illuminate\Support\Facades\Http::withBasicAuth($apiUser, $apiPass)
+            ->acceptJson()
+            ->asJson()
+            ->timeout(10)
+            ->retry(2, 200)
+            ->post("{$apiBaseUrl}{$endpoint}", $payload);
+
+        \Log::info('📨 رد النظام المركزي (Institutions API):', [
+            'status' => $response->status(),
+            'body'   => $response->body(),
+        ]);
+
+        if ($response->successful()) {
+            return [
+                'success'  => true,
+                'status'   => $response->status(),
+                'response' => $response->json(),
+            ];
+        }
+
+        \Log::warning("⚠️ فشل إرسال جهة العمل إلى الـ API", [
+            'status'  => $response->status(),
+            'body'    => $response->body(),
+            'payload' => $payload,
+        ]);
+
+        return [
+            'success' => false,
+            'status'  => $response->status(),
+            'error'   => $response->body(),
+        ];
+
+    } catch (\Throwable $th) {
+        \Log::error('🚨 Institution API exception: ' . $th->getMessage(), [
+            'payload' => $payload,
+        ]);
+
+        return [
+            'success' => false,
+            'status'  => 0,
+            'error'   => $th->getMessage(),
+        ];
+    }
+}
+
 
 
 
@@ -606,131 +687,130 @@ public function show(Institucion $institucion)
 
 
 
-    // public function update(Request $request, Institucion $institucion)
-    // {
-    //     $validated = $request->validate([
-    //         'name'               => ['required', 'string', 'max:255'],
-    //         'work_categories_id' => ['required', 'exists:work_categories,id'],
-    //         'subscriptions_id'   => ['required', 'exists:subscription33,id'],
-    //         'insurance_agent_id' => ['nullable', 'exists:insurance_agents,id'],
-    //         'status'             => ['nullable', 'integer'],
 
-    //         'commercial_number'  => [
-    //             'nullable','string','max:255',
-    //             Rule::unique('institucions', 'commercial_number')->ignore($institucion->id),
-    //         ],
-    //         'license_number'     => ['nullable','file','mimes:pdf,jpg,jpeg,png','max:5120'],
-    //         'commercial_record'  => ['nullable','file','mimes:pdf,jpg,jpeg,png','max:5120'],
-    //     ]);
+public function update(Request $request, Institucion $institucion)
+{
+    $validated = $request->validate([
+        'name'               => ['required', 'string', 'max:255'],
+        'work_categories_id' => ['required', 'exists:work_categories,id'],
+        // 'subscriptions_id'   => ['required', 'exists:subscription33,id'],
+        'insurance_agent_id' => ['nullable', 'exists:insurance_agents,id'],
+        'status'             => ['nullable', 'integer'],
 
-    //     $data = $validated;
+        'commercial_number'  => [
+            'nullable',
+            'string',
+            'max:255',
+            Rule::unique('institucions', 'commercial_number')->ignore($institucion->id),
+        ],
+        'license_number'     => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+        'commercial_record'  => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+        'excel_sheet'        => ['nullable', 'file', 'mimes:xlsx,xls,csv', 'max:51200'],
+    ]);
 
-    //     $wcId = (int) $request->input('work_categories_id');
-    //     $autoMap = [
-    //         19 => 10, // 19 أو 21 → 10
-    //         21 => 11,
-    //         20 => 10, // 20 → 11
-    //     ];
+    $data = $validated;
 
-    //     // استبدال الملفات عند الرفع (بدون إجبار – الفيو يحدد متى تظهر)
-    //     if ($request->hasFile('license_number')) {
-    //         // حذف القديم إن وجد
-    //         if ($institucion->license_number && Storage::exists($institucion->license_number)) {
-    //             Storage::delete($institucion->license_number);
-    //         }
-    //         $data['license_number'] = $request->file('license_number')
-    //                                          ->store('public/institucions_files');
-    //     }
-
-    //     if ($request->hasFile('commercial_record')) {
-    //         if ($institucion->commercial_record && Storage::exists($institucion->commercial_record)) {
-    //             Storage::delete($institucion->commercial_record);
-    //         }
-    //         $data['commercial_record'] = $request->file('commercial_record')
-    //                                             ->store('public/institucions_files');
-    //     }
-
-    //     $institucion->update($data);
-
-    //     return redirect()->route('institucions.show', $institucion)
-    //         ->with('success', 'تم تعديل جهة العمل بنجاح');
-    // }
-
-    public function update(Request $request, Institucion $institucion)
-        {
-            $validated = $request->validate([
-                'name'               => ['required', 'string', 'max:255'],
-                'work_categories_id' => ['required', 'exists:work_categories,id'],
-                // 'subscriptions_id'   => ['required', 'exists:subscription33,id'],
-                'insurance_agent_id' => ['nullable', 'exists:insurance_agents,id'],
-                'status'             => ['nullable', 'integer'],
-
-                'commercial_number'  => [
-                    'nullable',
-                    'string',
-                    'max:255',
-                    Rule::unique('institucions', 'commercial_number')->ignore($institucion->id),
-                ],
-                'license_number'     => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
-                'commercial_record'  => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
-                'excel_sheet'        => ['nullable', 'file', 'mimes:xlsx,xls,csv', 'max:51200'],
-            ]);
-
-            $data = $validated;
-
-            if ($request->hasFile('license_number')) {
-                if ($institucion->license_number && Storage::exists($institucion->license_number)) {
-                    Storage::delete($institucion->license_number);
-                }
-                $data['license_number'] = $request->file('license_number')
-                    ->store('public/institucions_files');
+    // 🔹 رفع الملفات المحدثة (رخصة وسجل)
+    foreach (['license_number', 'commercial_record'] as $field) {
+        if ($request->hasFile($field)) {
+            if ($institucion->$field && Storage::exists($institucion->$field)) {
+                Storage::delete($institucion->$field);
             }
+            $data[$field] = $request->file($field)->store('public/institucions_files');
+        }
+    }
 
-            if ($request->hasFile('commercial_record')) {
-                if ($institucion->commercial_record && Storage::exists($institucion->commercial_record)) {
-                    Storage::delete($institucion->commercial_record);
-                }
-                $data['commercial_record'] = $request->file('commercial_record')
-                    ->store('public/institucions_files');
-            }
+    // ✅ تحديث البيانات محلياً
+    $institucion->update($data);
 
-            $institucion->update($data);
+    //  إذا وُجد ملف Excel
+    if ($request->hasFile('excel_sheet')) {
+        try {
+            $importer = new \App\Imports\InstitucionSheetImport($institucion->id);
+            Excel::import($importer, $request->file('excel_sheet'));
 
-            if ($request->hasFile('excel_sheet')) {
-                try {
-                    $importer = new \App\Imports\InstitucionSheetImport($institucion->id);
-                    Excel::import($importer, $request->file('excel_sheet'));
+            $f = $request->file('excel_sheet');
+            $name = time() . '_excel_' . $f->getClientOriginalName();
+            $f->move(public_path('institucions_files'), $name);
 
-                    $f = $request->file('excel_sheet');
-                    $name = time() . '_excel_' . $f->getClientOriginalName();
-                    $f->move(public_path('institucions_files'), $name);
-
-                    // $institucion->update([
-                    //     'excel_path' => 'institucions_files/' . $name
-                    // ]);
-
-                    $msg = "تم تعديل جهة العمل بنجاح.<br>
+            $msg = "تم تعديل جهة العمل بنجاح.<br>
                     <strong>تمت إضافة {$importer->inserted} مشترك جديد</strong><br>
                     <strong>وتحديث {$importer->updated} مشترك موجود</strong>";
+            Alert::html('نجاح', $msg, 'success');
 
-                    Alert::html('نجاح', $msg, 'success');
-
-
-
-                    return redirect()->route('institucions.show', $institucion);
-                } catch (\Throwable $e) {
-                    Alert::warning(
-                        'تنبيه',
-                        'تم تعديل جهة العمل، لكن حدث خطأ أثناء استيراد ملف الإكسل:<br>' . e($e->getMessage())
-                    )->html();
-
-                    return redirect()->route('institucions.show', $institucion);
-                }
-            }
-
-            Alert::success('تم التعديل', 'تم تعديل جهة العمل بنجاح');
-            return redirect()->route('institucions.show', $institucion);
+        } catch (\Throwable $e) {
+            Alert::warning(
+                'تنبيه',
+                'تم تعديل جهة العمل، لكن حدث خطأ أثناء استيراد ملف الإكسل:<br>' . e($e->getMessage())
+            )->html();
         }
+    }
+
+    // بعد التعديل المحلي → تحديث النظام المركزي
+    \Log::info('📡 استدعاء updateInstitutionInApi بعد التحديث المحلي', ['institution_id' => $institucion->id]);
+    $apiResult = $this->updateInstitutionInApi($institucion);
+    \Log::info('📡 نتيجة التحديث في النظام المركزي', $apiResult);
+
+    //  عرض تنبيه موحد (بدون تفصيل)
+    Alert::success('تم التحديث', 'تم تحديث جهة العمل بنجاح');
+
+    return redirect()->route('institucions.show', $institucion);
+}
+
+
+
+public function updateInstitutionInApi($institution)
+{
+    $apiBaseUrl = 'http://192.168.81.17:6060';
+    $apiUser    = 'admin';
+    $apiPass    = 'admin';
+    $endpoint   = "/admin/Institutions/{$institution->id}";
+
+    //  تجهيز البيانات للإرسال
+    $payload = [
+        'id'             => $institution->id,
+        'name'           => $institution->name,
+        'description'    => $institution->code ?? '',
+        'subscriptionId' => $institution->subscriptions_id,
+        'workCategoryId' => optional($institution->subscription)->beneficiaries_categories_id,
+    ];
+
+    \Log::info('🚀 محاولة تحديث جهة العمل في الـ API الخارجي', [
+        'url' => "{$apiBaseUrl}{$endpoint}",
+        'payload' => $payload,
+    ]);
+
+    try {
+        $response = \Illuminate\Support\Facades\Http::withBasicAuth($apiUser, $apiPass)
+            ->acceptJson()
+            ->asJson()
+            ->timeout(10)
+            ->retry(2, 200)
+            ->put("{$apiBaseUrl}{$endpoint}", $payload);
+
+        $result = [
+            'url'      => "{$apiBaseUrl}{$endpoint}",
+            'payload'  => $payload,
+            'status'   => $response->status(),
+            'body'     => $response->body(),
+            'response' => $response->json(),
+            'success'  => $response->successful(),
+        ];
+
+        \Log::info('📨 رد النظام المركزي (Institution Update API):', $result);
+        return $result;
+
+    } catch (\Throwable $th) {
+        $error = [
+            'success' => false,
+            'status'  => 0,
+            'error'   => $th->getMessage(),
+            'payload' => $payload,
+        ];
+        \Log::error('🚨 Institution Update API exception: ' . $th->getMessage(), $error);
+        return $error;
+    }
+}
 
         
     public function destroy(Institucion $institucion)

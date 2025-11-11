@@ -9,6 +9,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
     <style>
         :root {
             --brand: #F58220;
@@ -262,11 +267,12 @@
                                 <select id="subscriber_type" name="subscriber_type" required>
                                     <option value="">اختر نوع المشترك...</option>
                                     <option value="husband" {{ old('subscriber_type') == 'husband' ? 'selected' : '' }}>
-                                        زوج</option>
-                                    <option value="wife" {{ old('subscriber_type') == 'wife' ? 'selected' : '' }}>زوجة
+                                        مشترك</option>
+                                    <option value="wife" {{ old('subscriber_type') == 'wife' ? 'selected' : '' }}>
+                                        مشتركة
                                     </option>
                                     <option value="single" {{ old('subscriber_type') == 'single' ? 'selected' : '' }}>
-                                        أعزب/عزباء</option>
+                                        مشترك اعزب</option>
                                 </select>
                             </div>
                             @error('subscriber_type')
@@ -400,15 +406,19 @@
                             <label for="institution_id">جهة العمل</label>
                             <div class="input-icon">
                                 <i class="fa fa-building"></i>
-                                <select id="institution_id" name="institution_id">
+                                <select id="institution_id" name="institution_id" class="form-control select2">
                                     <option value="">اختر جهة العمل...</option>
                                     <option value="__new__">+ إضافة جهة عمل جديدة</option>
+                                    @foreach ($institucions as $inst)
+                                        <option value="{{ $inst->id }}">{{ $inst->name }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                             @error('institution_id')
                                 <span class="error-text">{{ $message }}</span>
                             @enderror
                         </div>
+
 
                         {{-- زر الإرسال الوحيد (CRA + الشيت) --}}
                         <div class="actions" style="margin-top:14px;">
@@ -418,55 +428,244 @@
                 </div>
             </div>
 
-            {{-- أخطاء Laravel --}}
+            {{-- SweetAlert2 --}}
             <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+            {{-- إظهار أخطاء Laravel --}}
             @if ($errors->any())
                 <script>
                     Swal.fire({
                         icon: 'error',
                         html: `
-                <ul style="text-align: center; list-style: none; padding:0; margin:0;">
-                    @foreach ($errors->all() as $error)
-                        <li style="margin:5px 0;">{{ $error }}</li>
-                    @endforeach
-                </ul>
-            `,
+                    <ul style="text-align:center; list-style:none; padding:0; margin:0;">
+                        @foreach ($errors->all() as $error)
+                            <li style="margin:5px 0;">{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                `,
                         confirmButtonText: 'حسناً',
-                        confirmButtonColor: '#ff8800' // برتقالي
-                    }); <
-                    script >
-                        const instSelect = document.getElementById('institution_id');
+                        confirmButtonColor: '#F58220'
+                    });
+                </script>
+            @endif
 
-                    instSelect.addEventListener('change', function() {
-                        if (this.value === '__new__') {
+            <script>
+                // ----------------------------
+                // أرقام فقط
+                // ----------------------------
+                function onlyNumberKey(e) {
+                    const c = e.which ? e.which : e.keyCode;
+                    const ok = [8, 9, 37, 39, 46];
+                    if (ok.includes(c)) return true;
+                    return !(c < 48 || c > 57);
+                }
+            </script>
+
+            <script>
+                // ----------------------------
+                // منطق إظهار/إخفاء الرقم الوطني للزوجة
+                // ----------------------------
+                document.addEventListener('DOMContentLoaded', () => {
+                    const typeSelect = document.getElementById('subscriber_type');
+                    const spouseBlock = document.getElementById('spouse-nationalid-block');
+                    const spouseInput = document.getElementById('spouse_national_id');
+
+                    function toggleSpouseField() {
+                        if (typeSelect.value === 'wife') {
+                            spouseBlock.style.display = '';
+                            spouseInput.setAttribute('required', true);
+                        } else {
+                            spouseBlock.style.display = 'none';
+                            spouseInput.removeAttribute('required');
+                            spouseInput.value = '';
+                        }
+                    }
+                    typeSelect.addEventListener('change', toggleSpouseField);
+                    toggleSpouseField(); // تشغيل أولي عند تحميل الصفحة
+                });
+            </script>
+
+            <script>
+                // ----------------------------
+                // إرسال رمز التحقق OTP
+                // ----------------------------
+                function sendotp() {
+                    const phone = document.getElementById('phone').value;
+                    fetch("{{ route('customers.send-otp') }}", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRF-TOKEN": "{{ csrf_token() }}"
+                            },
+                            body: JSON.stringify({
+                                phone
+                            })
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                document.getElementById('otp-block').style.display = 'block';
+                                Swal.fire({
+                                    title: "تم الإرسال ✅",
+                                    text: "تم إرسال رمز التحقق إلى رقمك. صالح لمدة دقيقة واحدة.",
+                                    icon: "success",
+                                    confirmButtonText: "حسنًا",
+                                    confirmButtonColor: "#F58220"
+                                });
+                                startOtpTimer();
+                            } else {
+                                Swal.fire({
+                                    title: "خطأ!",
+                                    text: data.message || "حدث خطأ أثناء إرسال الرمز.",
+                                    icon: "error",
+                                    confirmButtonText: "حسنًا",
+                                    confirmButtonColor: "#F58220"
+                                });
+                            }
+                        })
+                        .catch(() => {
+                            Swal.fire({
+                                title: "⚠️ خطأ في الاتصال",
+                                text: "تعذر الاتصال بالسيرفر، حاول لاحقًا.",
+                                icon: "warning",
+                                confirmButtonText: "موافق",
+                                confirmButtonColor: "#F58220"
+                            });
+                        });
+                }
+
+                function startOtpTimer() {
+                    const help = document.querySelector('#otp-block .help');
+                    let seconds = 60;
+                    const interval = setInterval(() => {
+                        seconds--;
+                        help.textContent = `رمز التحقق صالح لمدة ${seconds} ثانية`;
+                        if (seconds <= 0) {
+                            clearInterval(interval);
+                            help.textContent = "انتهت صلاحية الرمز، يرجى إعادة الإرسال.";
+                        }
+                    }, 1000);
+                }
+            </script>
+
+            <script>
+                // ----------------------------
+                // منطق الفئات 7/8 + أنواع العمل + جهة العمل
+                // ----------------------------
+                const INSTITUCIONS = @json($institucions);
+
+                document.addEventListener('DOMContentLoaded', () => {
+                    const catSelect = document.getElementById('beneficiariesSupCategories');
+                    const wcBlock = document.getElementById('workCategoryBlock');
+                    const wcSelect = document.getElementById('work_category_id');
+                    const instBlock = document.getElementById('institutionBlock');
+                    const instSelect = document.getElementById('institution_id');
+
+                    const needsWorkCat = id => id === '7' || id === '8';
+                    const ALLOWED_BY_CAT = {
+                        '7': new Set(['19', '20']),
+                        '8': new Set(['21'])
+                    };
+
+                    // فلترة أنواع جهة العمل حسب الفئة
+                    function filterWorkCategories() {
+                        const cat = catSelect.value || '';
+                        const allowed = ALLOWED_BY_CAT[cat];
+                        Array.from(wcSelect.options).forEach(opt => {
+                            if (!opt.value) return opt.style.display = '';
+                            opt.style.display = !allowed ? '' : (allowed.has(String(opt.value)) ? '' : 'none');
+                        });
+                        const hiddenSelected = wcSelect.selectedOptions[0] && wcSelect.selectedOptions[0].style.display ===
+                            'none';
+                        if (hiddenSelected) {
+                            wcSelect.value = '';
+                            instSelect.innerHTML = '<option value="">اختر جهة العمل...</option>';
+                            wcSelect.dispatchEvent(new Event('change'));
+                        }
+                    }
+
+                    function lockIfSingle() {
+                        const cat = catSelect.value || '';
+                        const allowed = ALLOWED_BY_CAT[cat];
+                        if (allowed && allowed.size === 1) {
+                            const only = [...allowed][0];
+                            wcSelect.value = only;
+                            wcSelect.disabled = true;
+                            wcSelect.dispatchEvent(new Event('change'));
+                        } else {
+                            wcSelect.disabled = false;
+                        }
+                    }
+
+                    catSelect.addEventListener('change', () => {
+                        const show = needsWorkCat(catSelect.value || '');
+                        wcBlock.style.display = show ? '' : 'none';
+                        instBlock.style.display = show ? '' : 'none';
+                        wcSelect.toggleAttribute('required', show);
+                        instSelect.toggleAttribute('required', show);
+                        if (!show) {
+                            wcSelect.value = '';
+                            wcSelect.disabled = false;
+                            instSelect.innerHTML = '<option value="">اختر جهة العمل...</option>';
+                        }
+                        filterWorkCategories();
+                        lockIfSingle();
+                    });
+
+                    wcSelect.addEventListener('change', () => {
+                        const wcId = wcSelect.value || '';
+                        if (!wcId) {
+                            instSelect.innerHTML = '<option value="">اختر جهة العمل...</option>';
+                            return;
+                        }
+                        const list = INSTITUCIONS.filter(x => String(x.work_categories_id) === String(wcId));
+                        const opts = ['<option value="">اختر جهة العمل...</option>'];
+                        for (const it of list) {
+                            opts.push(`<option value="${it.id}">${it.name ?? it.title ?? ''}</option>`);
+                        }
+                        opts.push('<option value="__new__">+ إضافة جهة عمل جديدة</option>');
+                        instSelect.innerHTML = opts.join('');
+                    });
+                    // ----------------------------
+                    // ✅ نافذة إضافة جهة عمل جديدة (متوافقة مع Select2 + تصميم PHIF)
+                    // ----------------------------
+                    $('#institution_id').on('select2:select', function(e) {
+                        const val = e.params.data.id;
+                        if (val === '__new__') {
                             Swal.fire({
                                 title: 'إضافة جهة عمل جديدة',
                                 html: `
-          <div style="text-align:right">
-            <label>اسم الجهة</label>
-            <input id="new_inst_name" type="text" class="swal2-input" placeholder="أدخل اسم الجهة">
-
-            <label>نوع جهة العمل</label>
-            <select id="new_inst_wc" class="swal2-select">
-              <option value="">— اختر النوع —</option>
-              @foreach ($workCategories as $wc)
-                <option value="{{ $wc->id }}">{{ $wc->name }}</option>
-              @endforeach
-            </select>
-          </div>
-        `,
-                                focusConfirm: false,
+                                <div dir="rtl" style="text-align:right; font-family:'Tajawal', sans-serif;">
+                                    <label style="font-weight:600; color:#8C5346;">اسم الجهة</label>
+                                    <input id="new_inst_name" type="text" class="swal2-input" placeholder="أدخل اسم الجهة"
+                                        style="border-radius:10px; border:1px solid #ddd; direction:rtl; text-align:right;">
+                
+                                    <label style="font-weight:600; color:#8C5346;">نوع جهة العمل</label>
+                                    <select id="new_inst_wc" class="swal2-select" style="
+                                        width:250px; border-radius:10px; border:1px solid #ddd;
+                                        font-family:'Tajawal'; direction:rtl; text-align:right;">
+                                        <option value="">— اختر النوع —</option>
+                                        @foreach ($workCategories as $wc)
+                                            <option value="{{ $wc->id }}">{{ $wc->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            `,
+                                background: '#fff',
                                 showCancelButton: true,
-                                confirmButtonText: 'حفظ',
+                                confirmButtonText: '💾 حفظ',
                                 cancelButtonText: 'إلغاء',
                                 confirmButtonColor: '#F58220',
+                                cancelButtonColor: '#ccc',
+                                customClass: {
+                                    popup: 'phif-popup'
+                                },
                                 preConfirm: () => {
                                     const name = document.getElementById('new_inst_name').value.trim();
                                     const wc = document.getElementById('new_inst_wc').value;
-
                                     if (!name || !wc) {
-                                        Swal.showValidationMessage('الرجاء إدخال الاسم واختيار النوع');
+                                        Swal.showValidationMessage(
+                                            'الرجاء إدخال الاسم واختيار نوع الجهة');
                                         return false;
                                     }
                                     return {
@@ -474,478 +673,96 @@
                                         wc
                                     };
                                 }
-                            }).then((result) => {
+                            }).then(result => {
                                 if (result.isConfirmed) {
-                                    // إرسال AJAX لإنشاء الجهة
-                                    fetch("{{ route('institucions.store') }}", {
+                                    fetch("{{ route('institucion.storefromsubscriberview') }}", {
                                             method: "POST",
                                             headers: {
                                                 "Content-Type": "application/json",
-                                                "X-CSRF-TOKEN": "{{ csrf_token() }}"
+                                                "Accept": "application/json",
+                                                "X-CSRF-TOKEN": document.querySelector(
+                                                    'meta[name="csrf-token"]').getAttribute(
+                                                    'content')
                                             },
+                                            credentials: "same-origin", // ✅ يسمح بإرسال الكوكيز الخاصة بالـ session
                                             body: JSON.stringify({
                                                 name: result.value.name,
                                                 work_categories_id: result.value.wc
                                             })
                                         })
+
                                         .then(res => res.json())
                                         .then(data => {
                                             if (data.id) {
-                                                // إضافة الجهة الجديدة للقائمة وتحديدها
-                                                const opt = document.createElement("option");
-                                                opt.value = data.id;
-                                                opt.textContent = data.name;
-                                                instSelect.insertBefore(opt, instSelect.querySelector(
-                                                    'option[value="__new__"]'));
-                                                instSelect.value = data.id;
-                                                Swal.fire('تم الحفظ!', 'تمت إضافة جهة العمل بنجاح', 'success');
+                                                const newOption = new Option(data.name, data.id, true,
+                                                    true);
+                                                $('#institution_id').append(newOption).trigger(
+                                                'change');
+                                                Swal.fire({
+                                                    icon: 'success',
+                                                    title: 'تم الحفظ بنجاح ✅',
+                                                    text: 'تمت إضافة جهة العمل الجديدة بنجاح.',
+                                                    confirmButtonText: 'حسناً',
+                                                    confirmButtonColor: '#F58220'
+                                                });
                                             } else {
-                                                Swal.fire('خطأ', data.message || 'تعذر حفظ الجهة', 'error');
-                                                instSelect.value = "";
+                                                Swal.fire('خطأ', data.message || 'تعذر حفظ الجهة',
+                                                    'error');
+                                                $('#institution_id').val(null).trigger('change');
                                             }
                                         })
                                         .catch(() => {
                                             Swal.fire('خطأ', 'تعذر الاتصال بالسيرفر', 'error');
-                                            instSelect.value = "";
+                                            $('#institution_id').val(null).trigger('change');
                                         });
                                 } else {
-                                    instSelect.value = "";
+                                    $('#institution_id').val(null).trigger('change');
                                 }
                             });
                         }
                     });
-                </script>
-            @endif
 
+                    // ----------------------------
+                    // استرجاع old inputs
+                    // ----------------------------
+                    const oldCat = "{{ old('beneficiariesSupCategories') }}";
+                    const show = needsWorkCat(oldCat);
+                    wcBlock.style.display = show ? '' : 'none';
+                    instBlock.style.display = show ? '' : 'none';
+                    wcSelect.toggleAttribute('required', show);
+                    instSelect.toggleAttribute('required', show);
+                    filterWorkCategories();
+                    lockIfSingle();
 
-            {{-- نتيجة CRA من الـsession --}}
-            @if (session('cra_ok'))
-                @php($main = session('cra_main'))
-                @php($deps = collect(session('cra_dependents', [])))
-                <div class="panel-success">
-                    <strong>تم التحقق من مصلحة الأحوال</strong>
-                    @if ($main)
-                        <div
-                            style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px;">
-                            <div><b>الاسم:</b> {{ $main['name'] ?? '-' }}</div>
-                            <div><b>الرقم الوطني:</b> {{ $main['nationalID'] ?? '-' }}</div>
-                            <div><b>اسم الأم:</b> {{ $main['mother'] ?? '-' }}</div>
-                            <div><b>تاريخ الميلاد:</b> {{ $main['birthDate'] ?? '-' }}</div>
-                            <div><b>مكان الميلاد:</b> {{ $main['birthPlace'] ?? '-' }}</div>
-                            <div><b>الجنس:</b> {{ $main['gender'] ?? '-' }}</div>
-                        </div>
-                    @endif
-                    @if ($deps->count())
-                        <div class="table-wrap" style="margin-top:8px;">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>الاسم</th>
-                                        <th>الرقم الوطني</th>
-                                        <th>اسم الأم</th>
-                                        <th>تاريخ الميلاد</th>
-                                        <th>مكان الميلاد</th>
-                                        <th>الجنس</th>
-                                        <th>صلة القرابة</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($deps as $m)
-                                        <tr>
-                                            <td>{{ $m['name'] ?? '-' }}</td>
-                                            <td>{{ $m['nationalID'] ?? '-' }}</td>
-                                            <td>{{ $m['mother'] ?? '-' }}</td>
-                                            <td>{{ $m['birthDate'] ?? '-' }}</td>
-                                            <td>{{ $m['birthPlace'] ?? '-' }}</td>
-                                            <td>{{ $m['gender'] ?? '-' }}</td>
-                                            <td>{{ $m['relationship'] ?? '-' }}</td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    @endif
-                </div>
-            @endif
-
-            {{-- نتيجة الشِّيت من الـsession --}}
-            @if (session('verified_ok') && session('sheetMatch'))
-                <div class="panel-success">
-                    <strong>بيانات المطابقة من الشِّيت</strong>
-                    <ul style="margin:8px 0 0; padding-right:18px; line-height:1.9">
-                        <li>رقم الضمان: <b>{{ session('insured_no') ?? '—' }}</b></li>
-                        @if (session('pension_no'))
-                            <li>رقم المعاش: <b>{{ session('pension_no') }}</b></li>
-                        @endif
-                        <li>رقم الحساب: <b>{{ session('account_no') ?? '—' }}</b></li>
-                        <li>إجمالي المرتب: <b>{{ session('total_pension') ?? '—' }}</b></li>
-                    </ul>
-                </div>
-            @endif
-
-        </div>
-    </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const typeSelect = document.getElementById('subscriber_type');
-            const spouseBlock = document.getElementById('spouse-nationalid-block');
-            const spouseInput = document.getElementById('spouse_national_id');
-
-            function toggleSpouseField() {
-                if (typeSelect.value === 'wife') {
-                    spouseBlock.style.display = '';
-                    spouseInput.setAttribute('required', true);
-                } else {
-                    spouseBlock.style.display = 'none';
-                    spouseInput.removeAttribute('required');
-                    spouseInput.value = '';
-                }
-            }
-
-            typeSelect.addEventListener('change', toggleSpouseField);
-
-            // لما يرجع old input
-            toggleSpouseField();
-        });
-
-        function sendotp() {
-            const phone = document.getElementById('phone').value;
-
-            fetch("{{ route('customers.send-otp') }}", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRF-TOKEN": "{{ csrf_token() }}"
-                    },
-                    body: JSON.stringify({
-                        phone
-                    })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        // إظهار حقل OTP
-                        document.getElementById('otp-block').style.display = 'block';
-
-                        // تنبيه
-                        alert("تم إرسال رمز التحقق إلى رقمك. صالح لمدة دقيقة واحدة.");
-
-                        // بدء عداد دقيقة
-                        startOtpTimer();
-                    } else {
-                        alert(data.message || "حدث خطأ أثناء إرسال الرمز");
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                    alert("خطأ في الاتصال بالسيرفر");
-                });
-        }
-
-        function startOtpTimer() {
-            const help = document.querySelector('#otp-block .help');
-            let seconds = 60;
-
-            const interval = setInterval(() => {
-                seconds--;
-                help.textContent = `رمز التحقق صالح لمدة ${seconds} ثانية`;
-
-                if (seconds <= 0) {
-                    clearInterval(interval);
-                    help.textContent = "انتهت صلاحية الرمز، يرجى إعادة الإرسال.";
-                }
-            }, 1000);
-        }
-    </script>
-
-
-    <script>
-        // أرقام فقط
-        function onlyNumberKey(e) {
-            const c = e.which ? e.which : e.keyCode;
-            const ok = [8, 9, 37, 39, 46];
-            if (ok.includes(c)) return true;
-            return !(c < 48 || c > 57);
-        }
-
-        // بيانات الجهات (لو تحتاجيها)
-        const INSTITUCIONS = @json($institucions);
-
-        // منطق الفئات 7/8 وإظهار الجهة
-        (function() {
-            const catSelect = document.getElementById('beneficiariesSupCategories');
-            const wcBlock = document.getElementById('workCategoryBlock');
-            const wcSelect = document.getElementById('work_category_id');
-            const instBlock = document.getElementById('institutionBlock');
-            const instSelect = document.getElementById('institution_id');
-
-            const needsWorkCat = id => id === '7' || id === '8';
-            const ALLOWED_BY_CAT = {
-                '7': new Set(['19', '20']),
-                '8': new Set(['21'])
-            }; // عدّلي IDs لو اختلفت
-
-            function filterWorkCategories() {
-                const cat = catSelect.value || '';
-                const allowed = ALLOWED_BY_CAT[cat];
-                Array.from(wcSelect.options).forEach(opt => {
-                    if (!opt.value) return opt.style.display = '';
-                    opt.style.display = !allowed ? '' : (allowed.has(String(opt.value)) ? '' : 'none');
-                });
-                const hiddenSelected = wcSelect.selectedOptions[0] && wcSelect.selectedOptions[0].style.display ===
-                    'none';
-                if (hiddenSelected) {
-                    wcSelect.value = '';
-                    instSelect.innerHTML = '<option value="">اختر جهة العمل...</option>';
-                    wcSelect.dispatchEvent(new Event('change'));
-                }
-            }
-
-            function lockIfSingle() {
-                const cat = catSelect.value || '';
-                const allowed = ALLOWED_BY_CAT[cat];
-                if (allowed && allowed.size === 1) {
-                    const only = [...allowed][0];
-                    wcSelect.value = only;
-                    wcSelect.disabled = true;
-                    wcSelect.dispatchEvent(new Event('change'));
-                } else wcSelect.disabled = false;
-            }
-            catSelect.addEventListener('change', () => {
-                const show = needsWorkCat(catSelect.value || '');
-                wcBlock.style.display = show ? '' : 'none';
-                instBlock.style.display = show ? '' : 'none';
-                wcSelect.toggleAttribute('required', show);
-                instSelect.toggleAttribute('required', show);
-                if (!show) {
-                    wcSelect.value = '';
-                    wcSelect.disabled = false;
-                    instSelect.innerHTML = '<option value="">اختر جهة العمل...</option>';
-                }
-                filterWorkCategories();
-                lockIfSingle();
-            });
-            wcSelect.addEventListener('change', () => {
-                const wcId = wcSelect.value || '';
-                if (!wcId) {
-                    instSelect.innerHTML = '<option value="">اختر جهة العمل...</option>';
-                    return;
-                }
-                const list = INSTITUCIONS.filter(x => String(x.work_categories_id) === String(wcId));
-                const opts = ['<option value="">اختر جهة العمل...</option>'];
-                for (const it of list) {
-                    opts.push(`<option value="${it.id}">${it.name ?? it.title ?? ''}</option>`);
-                }
-                opts.push('<option value="__new__">+ إضافة جهة عمل جديدة</option>');
-                instSelect.innerHTML = opts.join('');
-            });
-            document.addEventListener('DOMContentLoaded', () => {
-                const oldCat = "{{ old('beneficiariesSupCategories') }}";
-                const show = needsWorkCat(oldCat);
-                wcBlock.style.display = show ? '' : 'none';
-                instBlock.style.display = show ? '' : 'none';
-                wcSelect.toggleAttribute('required', show);
-                instSelect.toggleAttribute('required', show);
-                filterWorkCategories();
-                lockIfSingle();
-
-                const oldWc = "{{ old('work_category_id') }}";
-                if (show && oldWc) {
-                    wcSelect.value = oldWc;
-                    wcSelect.dispatchEvent(new Event('change'));
-                    const list = INSTITUCIONS.filter(x => String(x.work_categories_id) === String(oldWc));
-                    const opts = ['<option value="">اختر جهة العمل...</option>'];
-                    for (const it of list) {
-                        opts.push(`<option value="${it.id}">${it.name ?? it.title ?? ''}</option>`);
-                    }
-                    instSelect.innerHTML = opts.join('');
-                    const oldInst = "{{ old('institution_id') }}";
-                    if (oldInst) instSelect.value = oldInst;
-                }
-            });
-        })();
-    </script>
-
-    <script>
-        (function() {
-            const catSelect = document.getElementById('beneficiariesSupCategories');
-            const wcBlock = document.getElementById('workCategoryBlock');
-            const wcSelect = document.getElementById('work_category_id');
-            const instBlock = document.getElementById('institutionBlock');
-            const instSelect = document.getElementById('institution_id');
-
-            const needsWorkCat = id => id === '7' || id === '8';
-            const ALLOWED_BY_CAT = {
-                '7': new Set(['19', '20']),
-                '8': new Set(['21'])
-            };
-
-            function filterWorkCategories() {
-                const cat = catSelect.value || '';
-                const allowed = ALLOWED_BY_CAT[cat];
-                Array.from(wcSelect.options).forEach(opt => {
-                    if (!opt.value) return opt.style.display = '';
-                    opt.style.display = !allowed ? '' : (allowed.has(String(opt.value)) ? '' : 'none');
-                });
-                const hiddenSelected = wcSelect.selectedOptions[0] && wcSelect.selectedOptions[0].style.display ===
-                    'none';
-                if (hiddenSelected) {
-                    wcSelect.value = '';
-                    instSelect.innerHTML = '<option value="">اختر جهة العمل...</option>';
-                    wcSelect.dispatchEvent(new Event('change'));
-                }
-            }
-
-            function lockIfSingle() {
-                const cat = catSelect.value || '';
-                const allowed = ALLOWED_BY_CAT[cat];
-                if (allowed && allowed.size === 1) {
-                    const only = [...allowed][0];
-                    wcSelect.value = only;
-                    wcSelect.disabled = true;
-                    wcSelect.dispatchEvent(new Event('change'));
-                } else wcSelect.disabled = false;
-            }
-
-            catSelect.addEventListener('change', () => {
-                const show = needsWorkCat(catSelect.value || '');
-                wcBlock.style.display = show ? '' : 'none';
-                instBlock.style.display = show ? '' : 'none';
-                wcSelect.toggleAttribute('required', show);
-                instSelect.toggleAttribute('required', show);
-                if (!show) {
-                    wcSelect.value = '';
-                    wcSelect.disabled = false;
-                    instSelect.innerHTML = '<option value="">اختر جهة العمل...</option>';
-                }
-                filterWorkCategories();
-                lockIfSingle();
-            });
-
-            wcSelect.addEventListener('change', () => {
-                const wcId = wcSelect.value || '';
-                if (!wcId) {
-                    instSelect.innerHTML = '<option value="">اختر جهة العمل...</option>';
-                    return;
-                }
-                const list = INSTITUCIONS.filter(x => String(x.work_categories_id) === String(wcId));
-                const opts = ['<option value="">اختر جهة العمل...</option>'];
-                for (const it of list) {
-                    opts.push(`<option value="${it.id}">${it.name ?? it.title ?? ''}</option>`);
-                }
-                opts.push('<option value="__new__">+ إضافة جهة عمل جديدة</option>');
-                instSelect.innerHTML = opts.join('');
-            });
-
-            // فتح مودال "إضافة جهة عمل جديدة"
-            instSelect.addEventListener('change', function() {
-                if (this.value === '__new__') {
-                    Swal.fire({
-                        title: 'إضافة جهة عمل جديدة',
-                        html: `
-          <div style="text-align:right">
-            <label>اسم الجهة</label>
-            <input id="new_inst_name" type="text" class="swal2-input" placeholder="أدخل اسم الجهة">
-            <label>نوع جهة العمل</label>
-            <select id="new_inst_wc" class="swal2-select" style="width:250px;">
-            <option value="">— اختر النوع —</option>
-            @foreach ($workCategories as $wc)
-                <option value="{{ $wc->id }}">{{ $wc->name }}</option>
-            @endforeach
-            </select>
-
-        `,
-                        showCancelButton: true,
-                        confirmButtonText: 'حفظ',
-                        cancelButtonText: 'إلغاء',
-                        confirmButtonColor: '#F58220',
-                        preConfirm: () => {
-                            const name = document.getElementById('new_inst_name').value.trim();
-                            const wc = document.getElementById('new_inst_wc').value;
-                            if (!name || !wc) {
-                                Swal.showValidationMessage('الرجاء إدخال الاسم واختيار نوع الجهة');
-                                return false;
-                            }
-                            return {
-                                name,
-                                wc
-                            };
+                    const oldWc = "{{ old('work_category_id') }}";
+                    if (show && oldWc) {
+                        wcSelect.value = oldWc;
+                        wcSelect.dispatchEvent(new Event('change'));
+                        const list = INSTITUCIONS.filter(x => String(x.work_categories_id) === String(oldWc));
+                        const opts = ['<option value="">اختر جهة العمل...</option>'];
+                        for (const it of list) {
+                            opts.push(`<option value="${it.id}">${it.name ?? it.title ?? ''}</option>`);
                         }
-                    }).then(result => {
-                        if (result.isConfirmed) {
-                            fetch("{{ route('institucion.storefromsubscriberview') }}", {
-                                    method: "POST",
-                                    headers: {
-                                        "Content-Type": "application/json",
-                                        "Accept": "application/json",
-                                        "X-CSRF-TOKEN": document.querySelector(
-                                            'meta[name="csrf-token"]').getAttribute('content')
-                                    },
-                                    body: JSON.stringify({
-                                        name: result.value.name,
-                                        work_categories_id: result.value.wc
-                                    })
-                                })
-                                .then(async res => {
-                                    if (!res.ok) {
-                                        const errorData = await res.json().catch(() => ({}));
-                                        throw errorData.message || 'تعذر الاتصال بالسيرفر';
-                                    }
-                                    return res.json();
-                                })
-                                .then(data => {
-                                    if (data.id) {
-                                        const opt = document.createElement("option");
-                                        opt.value = data.id;
-                                        opt.textContent = data.name;
-                                        instSelect.insertBefore(opt, instSelect.querySelector(
-                                            'option[value="__new__"]'));
-                                        instSelect.value = data.id;
-                                        Swal.fire('تم الحفظ!', 'تمت إضافة جهة العمل بنجاح',
-                                            'success');
-                                    }
-                                })
-                                .catch(err => {
-                                    Swal.fire('خطأ', typeof err === 'string' ? err :
-                                        'تعذر الاتصال بالسيرفر', 'error');
-                                    instSelect.value = "";
-                                });
-                        } else {
-                            instSelect.value = "";
-                        }
+                        opts.push('<option value="__new__">+ إضافة جهة عمل جديدة</option>');
+                        instSelect.innerHTML = opts.join('');
+                        const oldInst = "{{ old('institution_id') }}";
+                        if (oldInst) instSelect.value = oldInst;
+                    }
+                });
+            </script>
+
+            <script>
+                // ----------------------------
+                // تهيئة Select2
+                // ----------------------------
+                $(document).ready(function() {
+                    $('#institution_id').select2({
+                        placeholder: "اختر جهة العمل...",
+                        allowClear: true,
+                        width: '100%'
                     });
-                }
-            });
-
-            // old input
-            document.addEventListener('DOMContentLoaded', () => {
-                const oldCat = "{{ old('beneficiariesSupCategories') }}";
-                const show = needsWorkCat(oldCat);
-                wcBlock.style.display = show ? '' : 'none';
-                instBlock.style.display = show ? '' : 'none';
-                wcSelect.toggleAttribute('required', show);
-                instSelect.toggleAttribute('required', show);
-                filterWorkCategories();
-                lockIfSingle();
-
-                const oldWc = "{{ old('work_category_id') }}";
-                if (show && oldWc) {
-                    wcSelect.value = oldWc;
-                    wcSelect.dispatchEvent(new Event('change'));
-                    const list = INSTITUCIONS.filter(x => String(x.work_categories_id) === String(oldWc));
-                    const opts = ['<option value="">اختر جهة العمل...</option>'];
-                    for (const it of list) {
-                        opts.push(`<option value="${it.id}">${it.name ?? it.title ?? ''}</option>`);
-                    }
-                    opts.push('<option value="__new__">+ إضافة جهة عمل جديدة</option>');
-                    instSelect.innerHTML = opts.join('');
-                    const oldInst = "{{ old('institution_id') }}";
-                    if (oldInst) instSelect.value = oldInst;
-                }
-            });
-        })();
-    </script>
-
+                });
+            </script>
 
 </body>
 

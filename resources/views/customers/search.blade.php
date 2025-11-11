@@ -261,18 +261,18 @@
                         <label class="form-label">الرقم التأميني</label>
                         <input type="text" name="regnumber" class="form-control" placeholder="مثال: 13 رقم">
                     </div>
-                    {{-- <div class="col-md-4">
+                    <div class="col-md-4">
                         <label class="form-label">رقم الهاتف</label>
                         <input type="text" name="phone" class="form-control" placeholder="09XXXXXXXX">
-                    </div> --}}
+                    </div>
 
                     {{-- زر البحث في المنتصف --}}
                     <div class="col-12 mt-3 d-flex justify-content-center">
-                        <button type="submit" class="btn" id="submitBtn"
-                            style="width:auto; padding:0 150px; margin-right:0;">
-                            <span class="btn">بحث</span>
+                        <button type="submit" class="btn" id="submitBtn">
+                            <span class="btn-text">بحث</span>
                             <span class="btn-spin d-none" style="margin-inline-start:8px">⏳</span>
                         </button>
+
                     </div>
                 </form>
             </div>
@@ -476,16 +476,16 @@
                                 ${
                                     Array.isArray(s.values) && s.values.length
                                     ? `<table class="sub-table">
-                                                  <thead><tr><th>النوع</th><th>القيمة</th></tr></thead>
-                                                  <tbody>
-                                                    ${s.values.map(v => `
+                                                      <thead><tr><th>النوع</th><th>القيمة</th></tr></thead>
+                                                      <tbody>
+                                                        ${s.values.map(v => `
                                                 <tr>
                                                     <td>${val(v.type?.name)}</td>
                                                     <td>${v.is_percentage ? val(v.value)+'%' : val(v.value)+' دينار'}</td>
                                                 </tr>
                                             `).join('')}
-                                                  </tbody>
-                                               </table>`
+                                                      </tbody>
+                                                   </table>`
                                     : `<p style="color:var(--muted);margin:0">لا توجد قيم مسجلة</p>`
                                 }
                             </div>

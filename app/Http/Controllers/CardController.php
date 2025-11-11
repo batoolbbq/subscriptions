@@ -90,6 +90,12 @@ class CardController extends Controller
     }
 
 
+
+
+
+
+
+
     // public function storephoto(Request $request)
     // {
     //     //  dd($request->filled('img'));
@@ -248,7 +254,7 @@ class CardController extends Controller
     //         // dd($request);
     //         // // Alert::error("الرجاء قم بالتقاط صورة");
 
-    //         // return response()->json(3);
+    //         // return response()->json(3); 
     //         Alert::error("الرجاء قم بالتقاط صورة");
 
     //         return redirect()->back();
@@ -388,7 +394,7 @@ class CardController extends Controller
                 if ($pers === null) {
 
                     $per = new Personalphotos();
-                    // $per->image = $basename;
+                    $per->image = $basename;
                     $per->customers_id = $customers_id;
                     // $per->retireds_id = $ret->id;
                     $per->count = 0;
@@ -416,6 +422,83 @@ class CardController extends Controller
         }
     }
 
+
+
+
+// public function store(Request $request, $customers_id)
+// {
+//     try {
+//         if (!$request->filled('selfImg')) {
+//             return response()->json("الرجاء قم بالتقاط صورة", 400);
+//         }
+
+//         $img = str_replace('data:image/jpeg;base64,', '', $request->selfImg);
+//         $img = str_replace(' ', '+', $img);
+//         $data = base64_decode($img);
+
+//         $basename = "photo" . $customers_id . time();
+
+//         $path = public_path('photo/personalphotos/');
+//         if (!file_exists($path)) mkdir($path, 0777, true);
+
+//         $file = $path . $basename . '.jpeg';
+//         $success = file_put_contents($file, $data);
+
+//         if (!$success) {
+//             return response()->json(['error' => 'فشل حفظ الصورة في المجلد'], 500);
+//         }
+
+//         $photo = Personalphotos::updateOrCreate(
+//             ['customers_id' => $customers_id],
+//             [
+//                 'image' => $basename,
+//                 'count' => 0,
+//                 'printed' => 0,
+//             ]
+//         );
+
+//         $piaResponse = $this->sendToPia($customers_id, $basename);
+
+//         return response()->json([
+//             'status' => true,
+//             'message' => 'تم حفظ الصورة وإرسالها إلى نظام البطاقات ✅',
+//             'pia_response' => $piaResponse,
+//         ]);
+
+//     } catch (\Exception $e) {
+//         return response()->json([
+//             'status' => false,
+//             'message' => $e->getMessage(),
+//         ], 500);
+//     }
+// }
+
+
+
+
+
+  public function showByRegnumber($regnumber)
+    {
+        $pers = null;
+
+        $customer = \App\Models\Customer::with([
+            'cities', 'socialstatuses', 'municipals', 'nationalities', 'bloodtypes'
+        ])->where('regnumber', $regnumber)->first();
+
+        if (!$customer) {
+            \RealRashid\SweetAlert\Facades\Alert::error('خطأ', 'لم يتم العثور على المشترك.');
+            return redirect()->route('customers.renedit');
+        }
+
+        // 🔹 لو حبيتي ترجع الصورة الشخصية مستقبلاً
+        // $pers = \App\Models\Personalphotos::where('customers_id', $customer->id)
+        //     ->orderBy('id', 'desc')
+        //     ->first();
+
+        $beneficiary = \App\Models\beneficiariesSupCategories::find($customer->beneficiaries_sup_categories_id);
+
+        return view('cards.card', compact('customer', 'beneficiary', 'pers'));
+    }
 
 
 
@@ -536,39 +619,44 @@ class CardController extends Controller
 
 
 
-public function indexApi()
-{
-    try {
-        $blocked = [
-            'subscription_id','iban','bank_branch_id','total_pension','pension_no',
-            'account_no','insured_no','institucion_id','institution_id','bank_id'
-        ];
+// public function indexApi()
+// {
+//     try {
+//         $blocked = [
+//             'subscription_id','iban','bank_branch_id','total_pension','pension_no',
+//             'account_no','insured_no','institucion_id','institution_id','bank_id'
+//         ];
 
-        $customers = Customer::where('active', 0)
-            ->with('lastPhoto')
-            ->get()
-            ->makeHidden($blocked);
+//         $customers = Customer::where('active', 0)
+//             ->with('lastPhoto')
+//             ->latest()
+//             ->get()
+//             ->makeHidden($blocked);
 
-        // نخلي بس اللي عندهم صورة
-        $customers = $customers->filter(function ($customer) {
-            return $customer->lastPhoto && $customer->lastPhoto->image;
-        })->map(function ($customer) {
-            $customer->photo = asset('photo/personalphotos/' . $customer->lastPhoto->image . '.jpeg');
-            unset($customer->lastPhoto);
-            return $customer;
-        })->values();
+//         $customers = $customers->filter(function ($customer) {
+//             return $customer->lastPhoto && $customer->lastPhoto->image;
+//         })->map(function ($customer) {
+//             $customer->photo = asset('photo/personalphotos/' . $customer->lastPhoto->image . '.jpeg');
+//             unset($customer->lastPhoto);
+//             return $customer;
+//         })->values();
 
-        return response()->json([
-            'status' => true,
-            'data'   => $customers,
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'status'  => false,
-            'message' => $e->getMessage(),
-        ], 500);
-    }
-}
+//         return response()->json([
+//             'status' => true,
+//             'data'   => $customers,
+//         ]);
+//     } catch (\Exception $e) {
+//         return response()->json([
+//             'status'  => false,
+//             'message' => $e->getMessage(),
+//         ], 500);
+//     }
+// }
+
+
+
+
+
 
 
 
